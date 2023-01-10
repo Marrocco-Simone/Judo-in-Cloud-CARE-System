@@ -8,11 +8,63 @@ const currentTimeElem = document.querySelector(".current-time");
 const totalTimeElem = document.querySelector(".total-time");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
-// TODO maybe delete if not working in stream
-const thumbnailImg = document.querySelector(".thumbnail-img");
-// TODO maybe delete if not working in stream
-const previewImg = document.querySelector(".preview-img");
 const video = document.querySelector("video");
+
+// live
+let webcamMediaStream = new MediaStream();
+let webcamMediaRecorder = new MediaRecorder(webcamMediaStream);
+let isFirstBlob = true;
+let webcamBlob;
+let lastCurrentValue = 0;
+webcamMediaRecorder.addEventListener("dataavailable", (e) => {
+  const blob = e.data;
+  if (isFirstBlob) {
+    webcamBlob = blob;
+    const url = URL.createObjectURL(webcamBlob);
+    video.src = url;
+    isFirstBlob = false;
+  } else {
+    lastCurrentValue = video.currentTime;
+    webcamBlob = new Blob([webcamBlob, blob], {
+      type: 'video/webm; codecs="vp8, opus"',
+    });
+    const url = URL.createObjectURL(webcamBlob);
+    video.src = url;
+  }
+
+  video.play();
+});
+
+function showWebcamStream() {
+  // * this should go at 60 fps (or maybe 30)
+  webcamMediaRecorder.start(5 * 1000);
+  // video.srcObject = webcamMediaStream;
+}
+
+getWebcamStream();
+function getWebcamStream() {
+  navigator.getUserMedia =
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia;
+
+  navigator.getUserMedia(
+    {
+      audio: true,
+      video: true,
+    },
+    /** @param {MediaStream} stream */
+    (stream) => {
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+      webcamMediaStream.addTrack(videoTrack);
+      webcamMediaStream.addTrack(audioTrack);
+      showWebcamStream();
+    },
+    (err) => console.log(err)
+  );
+}
 
 // keyboard commands
 document.addEventListener("keydown", (e) => {
@@ -113,6 +165,7 @@ video.addEventListener("volumechange", () => {
 });
 
 // duration
+// TODO DELETE
 video.addEventListener("loadeddata", () => {
   totalTimeElem.textContent = formatDuration(video.duration);
 });
@@ -195,17 +248,8 @@ function handleTimelineUpdate(e) {
   if (isScrubbing) {
     e.preventDefault();
     timelineContainer.style.setProperty("--progress-position", percent);
-    // TODO maybe delete if not working in stream
-    thumbnailImg.src = previewImgSrc;
   }
 
-  // TODO maybe delete if not working in stream
-  const previewImgNumber = Math.max(
-    1,
-    Math.floor((percent * video.duration) / 10)
-  );
-  const previewImgSrc = `assets/previewImgs/preview${previewImgNumber}.jpg`;
-  previewImg.src = previewImgSrc;
   timelineContainer.style.setProperty("--preview-position", percent);
 }
 
