@@ -192,6 +192,13 @@ function toggleScrubbling(e) {
 function handleTimelineUpdate(e) {
   const percent = getVideoTimelinePercent(e);
 
+  if (isScrubbing) {
+    e.preventDefault();
+    timelineContainer.style.setProperty("--progress-position", percent);
+    // TODO maybe delete if not working in stream
+    thumbnailImg.src = previewImgSrc;
+  }
+
   // TODO maybe delete if not working in stream
   const previewImgNumber = Math.max(
     1,
@@ -200,13 +207,6 @@ function handleTimelineUpdate(e) {
   const previewImgSrc = `assets/previewImgs/preview${previewImgNumber}.jpg`;
   previewImg.src = previewImgSrc;
   timelineContainer.style.setProperty("--preview-position", percent);
-
-  // TODO maybe delete if not working in stream
-  if (isScrubbing) {
-    e.preventDefault();
-    thumbnailImg.src = previewImgSrc;
-    timelineContainer.style.setProperty("--progress-position", percent);
-  }
 }
 
 function getVideoTimelinePercent(e) {
