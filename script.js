@@ -1,4 +1,5 @@
 const MAXTIME = 1 * 60;
+// leave this at max 1 sec. Can probably lower, but maybe performance issues
 const REFRESHRATE = 1 * 1000;
 
 const playPauseBtn = document.querySelector(".play-pause-btn");
@@ -87,9 +88,10 @@ function appendToSourceBuffer() {
   ) {
     const blob = arrayOfBlobs.shift();
     if (blob && blob.size) {
-      blob
-        .arrayBuffer()
-        .then((arrayBuffer) => sourceBuffer.appendBuffer(arrayBuffer));
+      blob.arrayBuffer().then((arrayBuffer) => {
+        sourceBuffer.appendBuffer(arrayBuffer);
+        updateTotalTIme();
+      });
     }
   }
 
@@ -214,13 +216,16 @@ function getCurrentTime() {
   return video.currentTime - video.buffered.start(0);
 }
 
+// called when a new buffer is added
+function updateTotalTIme() {
+  totalTimeElem.textContent = formatTime(getVideoDuration());
+}
+
 video.addEventListener("timeupdate", () => {
   superlog();
   const newCurrentTime = getCurrentTime();
   const newTotalTime = getVideoDuration();
   currentTimeElem.textContent = formatTime(newCurrentTime);
-  // TODO move to a place where it is always updated
-  totalTimeElem.textContent = formatTime(newTotalTime);
   const percent = newCurrentTime / newTotalTime;
   timelineContainer.style.setProperty("--progress-position", percent);
 });
