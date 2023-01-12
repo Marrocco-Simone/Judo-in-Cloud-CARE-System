@@ -175,6 +175,13 @@ function togglePlay() {
 }
 
 video.addEventListener("play", () => {
+  // this generates an error when starting the app, but it is fine afterward
+  try {
+    if (video.currentTime < video.buffered.start(0)) {
+      returnLive();
+    }
+  } catch (e) {}
+
   videoContainer.classList.remove("paused");
 });
 
@@ -210,7 +217,12 @@ video.addEventListener("volumechange", () => {
 
 // duration
 function getVideoDuration() {
-  return video.buffered.end(0) - video.buffered.start(0);
+  // this generates an error when starting the app, but it is fine afterward
+  try {
+    return video.buffered.end(0) - video.buffered.start(0);
+  } catch (e) {
+    return 0;
+  }
 }
 
 function getCurrentTime() {
@@ -297,7 +309,8 @@ function toggleScrubbling(e) {
     wasPaused = video.paused;
     video.pause();
   } else {
-    const newCurrentTime = percent * getVideoDuration() + video.buffered.start(0);
+    const newCurrentTime =
+      percent * getVideoDuration() + video.buffered.start(0);
     video.currentTime = newCurrentTime;
     if (!wasPaused) video.play();
   }
