@@ -61,6 +61,7 @@ function getWebcamStream() {
     {
       audio: true,
       video: { width: 1920, height: 1080 },
+      facingMode: { exact: "enviroment" }
     },
     /** @param {MediaStream} stream */
     (stream) => {
@@ -74,7 +75,7 @@ function getWebcamStream() {
     (err) => {
       console.log(err);
       alert(
-        "Assicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CAR system"
+        "Assicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system"
       );
     }
   );
@@ -120,7 +121,11 @@ const keyMap = {
 };
 
 document.addEventListener("keydown", (e) => {
-  keyMap[e.key.toLowerCase()]();
+  const key = e.key.toLowerCase();
+  if(keyMap.key) {
+    e.preventDefault();
+    keyMap[key]();
+  }
 });
 
 // view modes
