@@ -1,1 +1,0 @@
-ffmpeg -i assets/video.mp4 -vf fps=1/10,scale=120:-1 assets/previewImgs/preview%d.jpg
