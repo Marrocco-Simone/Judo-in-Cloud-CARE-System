@@ -9,6 +9,7 @@ const muteBtn = document.querySelector(".mute-btn");
 const volumeSlider = document.querySelector(".volume-slider");
 const currentTimeElem = document.querySelector(".current-time");
 const totalTimeElem = document.querySelector(".total-time");
+const liveBtnElem = document.querySelector(".live-btn");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
@@ -120,14 +121,23 @@ document.addEventListener("keydown", (e) => {
     case "j":
       skip(-10);
       break;
+    case ",":
+      skip(-0.1);
+      break;
     case "arrowright":
       skip(5);
       break;
     case "l":
       skip(10);
       break;
+    case ".":
+      skip(0.1);
+      break;
     case "p":
       changePlaybackSpeed();
+      break;
+    case "backspace":
+      returnLive();
       break;
   }
 });
@@ -137,7 +147,6 @@ theaterBtn.addEventListener("click", toggleTheaterMode);
 fullScreeBtn.addEventListener("click", toggleFullScreenMode);
 
 function toggleTheaterMode() {
-  // TODO here return so that is not possible to exit?
   videoContainer.classList.toggle("theater");
 }
 
@@ -197,18 +206,22 @@ video.addEventListener("volumechange", () => {
 });
 
 // duration
-// TODO DELETE
-/* video.addEventListener("loadeddata", () => {
-  totalTimeElem.textContent = formatDuration(video.duration);
-}); */
+function getVideoDuration() {
+  return video.buffered.end(0) - video.buffered.start(0);
+}
+
+function getCurrentTime() {
+  return video.currentTime - video.buffered.start(0);
+}
 
 video.addEventListener("timeupdate", () => {
   superlog();
-  currentTimeElem.textContent = formatDuration(
-    video.currentTime - video.buffered.start(0)
-  );
-  totalTimeElem.textContent = formatDuration(getVideoDuration());
-  const percent = video.currentTime / video.duration;
+  const newCurrentTime = getCurrentTime();
+  const newTotalTime = getVideoDuration();
+  currentTimeElem.textContent = formatTime(newCurrentTime);
+  // TODO move to a place where it is always updated
+  totalTimeElem.textContent = formatTime(newTotalTime);
+  const percent = newCurrentTime / newTotalTime;
   timelineContainer.style.setProperty("--progress-position", percent);
 });
 
@@ -216,7 +229,7 @@ video.addEventListener("timeupdate", () => {
 const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
 });
-function formatDuration(time) {
+function formatTime(time) {
   const seconds = Math.floor(time % 60);
   const minutes = Math.floor(time / 60) % 60;
   const hours = Math.floor(time / 60 / 60);
@@ -236,14 +249,17 @@ function skip(duration) {
   video.currentTime += duration;
 }
 
+// return live
+liveBtnElem.addEventListener("click", returnLive);
+
+function returnLive() {
+  video.currentTime = getVideoDuration();
+}
+
 // playback speed
 speedBtn.addEventListener("click", changePlaybackSpeed);
 
 function changePlaybackSpeed() {
-  /* let newPlaybackRate = video.playbackRate + .25;
-  if (newPlaybackRate > 2) newPlaybackRate = 0.25;
-  video.playbackRate = newPlaybackRate; */
-
   if (video.playbackRate === 1) video.playbackRate = 0.33;
   else video.playbackRate = 1;
 
@@ -294,10 +310,6 @@ function getVideoTimelinePercent(e) {
   const percent = Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
 
   return percent;
-}
-
-function getVideoDuration() {
-  return video.buffered.end(0) - video.buffered.start(0);
 }
 
 // TODO delete
