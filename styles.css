@@ -161,6 +161,15 @@ video {
   flex-grow: 1;
 }
 
+.live-dot {
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+  margin-left: 10px;
+  background-color: red;
+  border-radius: 50%;
+}
+
 /* playback speed */
 .video-controls-container .controls button.wide-btn {
   width: 50px;

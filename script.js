@@ -11,6 +11,7 @@ const volumeSlider = document.querySelector(".volume-slider");
 const currentTimeElem = document.querySelector(".current-time");
 const totalTimeElem = document.querySelector(".total-time");
 const liveBtnElem = document.querySelector(".live-btn");
+const liveDotElem = document.querySelector(".live-dot");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
@@ -226,8 +227,12 @@ video.addEventListener("timeupdate", () => {
   const newCurrentTime = getCurrentTime();
   const newTotalTime = getVideoDuration();
   currentTimeElem.textContent = formatTime(newCurrentTime);
+
   const percent = newCurrentTime / newTotalTime;
   timelineContainer.style.setProperty("--progress-position", percent);
+
+  const liveDotColor = percent > 0.95 ? "red" : "#bbb";
+  liveDotElem.style.setProperty("background-color", liveDotColor);
 });
 
 // !IMPORTANT FOR JIC
