@@ -11,34 +11,72 @@ const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
 
 // live
-let webcamMediaStream = new MediaStream();
-let webcamMediaRecorder = new MediaRecorder(webcamMediaStream);
-let isFirstBlob = true;
-let webcamBlob;
-let lastCurrentValue = 0;
-webcamMediaRecorder.addEventListener("dataavailable", (e) => {
-  const blob = e.data;
-  if (isFirstBlob) {
-    webcamBlob = blob;
-    const url = URL.createObjectURL(webcamBlob);
-    video.src = url;
-    isFirstBlob = false;
-  } else {
-    lastCurrentValue = video.currentTime;
-    webcamBlob = new Blob([webcamBlob, blob], {
-      type: 'video/webm; codecs="vp8, opus"',
-    });
-    const url = URL.createObjectURL(webcamBlob);
-    video.src = url;
-  }
+// * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
+const mediaStream = new MediaStream();
+const mediaSource = new MediaSource();
 
-  video.play();
+const url = URL.createObjectURL(mediaSource);
+video.src = url;
+
+/** @type {SourceBuffer} */
+let sourceBuffer;
+/** @type {Blob[]} */
+const arrayOfBlobs = [];
+
+const MAXTIME = 1 * 60;
+const REFRESHRATE = 1 * 1000;
+
+function getVideoDuration() {
+  return video.buffered.end(0) - video.buffered.start(0);
+}
+
+mediaSource.addEventListener("sourceopen", () => {
+  const type = 'video/webm; codecs="vp8, opus"';
+  console.log(type);
+  console.log(mediaSource);
+  sourceBuffer = mediaSource.addSourceBuffer(type);
+  sourceBuffer.mode = "sequence";
+  sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
 });
 
-function showWebcamStream() {
-  // * this should go at 60 fps (or maybe 30)
-  webcamMediaRecorder.start(5 * 1000);
-  // video.srcObject = webcamMediaStream;
+const mediaRecorder = new MediaRecorder(mediaStream);
+mediaRecorder.addEventListener("dataavailable", (e) => {
+  const blob = e.data;
+  // console.log(blob);
+  arrayOfBlobs.push(blob);
+  appendToSourceBuffer();
+});
+
+function appendToSourceBuffer() {
+  if (
+    mediaSource.readyState === "open" &&
+    sourceBuffer &&
+    sourceBuffer.updating === false
+  ) {
+    const blob = arrayOfBlobs.shift();
+    if (blob && blob.size) {
+      blob
+        .arrayBuffer()
+        .then((arrayBuffer) => sourceBuffer.appendBuffer(arrayBuffer));
+    }
+  }
+
+  // Limit the total buffer size to MAXTIME
+  // This way we don't run out of RAM
+  if (video.buffered.length && getVideoDuration() > MAXTIME) {
+    sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
+  }
+}
+
+// TODO delete
+function superlog() {
+  const obj = {
+    currentTime: Math.floor(video.currentTime),
+    bStart: Math.floor(video.buffered.start(0)),
+    bEnd: Math.floor(video.buffered.end(0)),
+    bDifference: Math.floor(getVideoDuration()),
+  };
+  console.log(obj);
 }
 
 getWebcamStream();
@@ -58,9 +96,10 @@ function getWebcamStream() {
     (stream) => {
       const videoTrack = stream.getVideoTracks()[0];
       const audioTrack = stream.getAudioTracks()[0];
-      webcamMediaStream.addTrack(videoTrack);
-      webcamMediaStream.addTrack(audioTrack);
-      showWebcamStream();
+      mediaStream.addTrack(videoTrack);
+      mediaStream.addTrack(audioTrack);
+
+      mediaRecorder.start(REFRESHRATE);
     },
     (err) => console.log(err)
   );
@@ -166,12 +205,14 @@ video.addEventListener("volumechange", () => {
 
 // duration
 // TODO DELETE
-video.addEventListener("loadeddata", () => {
+/* video.addEventListener("loadeddata", () => {
   totalTimeElem.textContent = formatDuration(video.duration);
-});
+}); */
 
 video.addEventListener("timeupdate", () => {
+  superlog();
   currentTimeElem.textContent = formatDuration(video.currentTime);
+  totalTimeElem.textContent = formatDuration(getVideoDuration());
   const percent = video.currentTime / video.duration;
   timelineContainer.style.setProperty("--progress-position", percent);
 });
