@@ -1,3 +1,6 @@
+const MAXTIME = 1 * 60;
+const REFRESHRATE = 1 * 1000;
+
 const playPauseBtn = document.querySelector(".play-pause-btn");
 const theaterBtn = document.querySelector(".theater-btn");
 const fullScreeBtn = document.querySelector(".full-screen-btn");
@@ -12,74 +15,38 @@ const video = document.querySelector("video");
 
 // live
 // * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
+/** holder of the webcam audio and video stream */
 const mediaStream = new MediaStream();
+/** source for the video tag */
 const mediaSource = new MediaSource();
-
-const url = URL.createObjectURL(mediaSource);
-video.src = url;
-
-/** @type {SourceBuffer} */
+/** saves the webcam stream to various Blobs */
+const mediaRecorder = new MediaRecorder(mediaStream);
+/** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
 /** @type {Blob[]} */
 const arrayOfBlobs = [];
 
-const MAXTIME = 1 * 60;
-const REFRESHRATE = 1 * 1000;
+const url = URL.createObjectURL(mediaSource);
+video.src = url;
 
-function getVideoDuration() {
-  return video.buffered.end(0) - video.buffered.start(0);
-}
+getWebcamStream();
 
+// * when mediaSource is ready, create the sourceBuffer
 mediaSource.addEventListener("sourceopen", () => {
   const type = 'video/webm; codecs="vp8, opus"';
-  console.log(type);
-  console.log(mediaSource);
   sourceBuffer = mediaSource.addSourceBuffer(type);
   sourceBuffer.mode = "sequence";
   sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
 });
 
-const mediaRecorder = new MediaRecorder(mediaStream);
+// * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
 mediaRecorder.addEventListener("dataavailable", (e) => {
   const blob = e.data;
-  // console.log(blob);
   arrayOfBlobs.push(blob);
   appendToSourceBuffer();
 });
 
-function appendToSourceBuffer() {
-  if (
-    mediaSource.readyState === "open" &&
-    sourceBuffer &&
-    sourceBuffer.updating === false
-  ) {
-    const blob = arrayOfBlobs.shift();
-    if (blob && blob.size) {
-      blob
-        .arrayBuffer()
-        .then((arrayBuffer) => sourceBuffer.appendBuffer(arrayBuffer));
-    }
-  }
-
-  // Limit the total buffer size to MAXTIME
-  // This way we don't run out of RAM
-  if (video.buffered.length && getVideoDuration() > MAXTIME) {
-    sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
-  }
-}
-
-// TODO delete
-function superlog() {
-  const obj = {
-    currentTime: Math.floor(video.currentTime),
-    bStart: Math.floor(video.buffered.start(0)),
-    bEnd: Math.floor(video.buffered.end(0)),
-    bDifference: Math.floor(getVideoDuration()),
-  };
-  console.log(obj);
-}
-
-getWebcamStream();
+// * get the webcam stream, save it to the mediaStream and start the mediaRecorder
 function getWebcamStream() {
   navigator.getUserMedia =
     navigator.getUserMedia ||
@@ -101,8 +68,34 @@ function getWebcamStream() {
 
       mediaRecorder.start(REFRESHRATE);
     },
-    (err) => console.log(err)
+    (err) => {
+      console.log(err);
+      alert(
+        "Assicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CAR system"
+      );
+    }
   );
+}
+
+// * add to the sourceBuffer the new segment
+function appendToSourceBuffer() {
+  if (
+    mediaSource.readyState === "open" &&
+    sourceBuffer &&
+    sourceBuffer.updating === false
+  ) {
+    const blob = arrayOfBlobs.shift();
+    if (blob && blob.size) {
+      blob
+        .arrayBuffer()
+        .then((arrayBuffer) => sourceBuffer.appendBuffer(arrayBuffer));
+    }
+  }
+
+  // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
+  if (video.buffered.length && getVideoDuration() > MAXTIME) {
+    sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
+  }
 }
 
 // keyboard commands
@@ -133,7 +126,7 @@ document.addEventListener("keydown", (e) => {
     case "l":
       skip(10);
       break;
-    case "s":
+    case "p":
       changePlaybackSpeed();
       break;
   }
@@ -211,7 +204,9 @@ video.addEventListener("volumechange", () => {
 
 video.addEventListener("timeupdate", () => {
   superlog();
-  currentTimeElem.textContent = formatDuration(video.currentTime);
+  currentTimeElem.textContent = formatDuration(
+    video.currentTime - video.buffered.start(0)
+  );
   totalTimeElem.textContent = formatDuration(getVideoDuration());
   const percent = video.currentTime / video.duration;
   timelineContainer.style.setProperty("--progress-position", percent);
@@ -299,4 +294,19 @@ function getVideoTimelinePercent(e) {
   const percent = Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
 
   return percent;
+}
+
+function getVideoDuration() {
+  return video.buffered.end(0) - video.buffered.start(0);
+}
+
+// TODO delete
+function superlog() {
+  const obj = {
+    currentTime: Math.floor(video.currentTime),
+    bStart: Math.floor(video.buffered.start(0)),
+    bEnd: Math.floor(video.buffered.end(0)),
+    bDifference: Math.floor(getVideoDuration()),
+  };
+  console.log(obj);
 }
