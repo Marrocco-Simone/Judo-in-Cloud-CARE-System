@@ -263,7 +263,7 @@ function skip(duration) {
 liveBtnElem.addEventListener("click", returnLive);
 
 function returnLive() {
-  video.currentTime = getVideoDuration();
+  video.currentTime = video.buffered.end(0);
 }
 
 // playback speed
