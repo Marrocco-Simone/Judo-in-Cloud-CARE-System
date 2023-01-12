@@ -103,46 +103,24 @@ function appendToSourceBuffer() {
 }
 
 // keyboard commands
+const keyMap = {
+  " ": () => togglePlay(),
+  k: () => togglePlay(),
+  f: () => toggleFullScreenMode(),
+  t: () => toggleTheaterMode(),
+  m: () => toggleMute(),
+  arrowleft: () => skip(-5),
+  j: () => skip(-10),
+  ",": () => skip(-0.1),
+  arrowright: () => skip(5),
+  l: () => skip(10),
+  ".": () => skip(0.1),
+  p: () => changePlaybackSpeed(),
+  backspace: () => returnLive(),
+};
+
 document.addEventListener("keydown", (e) => {
-  switch (e.key.toLowerCase()) {
-    case " ":
-    case "k":
-      togglePlay();
-      break;
-    case "f":
-      toggleFullScreenMode();
-      break;
-    case "t":
-      toggleTheaterMode();
-      break;
-    case "m":
-      toggleMute();
-      break;
-    case "arrowleft":
-      skip(-5);
-      break;
-    case "j":
-      skip(-10);
-      break;
-    case ",":
-      skip(-0.1);
-      break;
-    case "arrowright":
-      skip(5);
-      break;
-    case "l":
-      skip(10);
-      break;
-    case ".":
-      skip(0.1);
-      break;
-    case "p":
-      changePlaybackSpeed();
-      break;
-    case "backspace":
-      returnLive();
-      break;
-  }
+  keyMap[e.key.toLowerCase()]();
 });
 
 // view modes
