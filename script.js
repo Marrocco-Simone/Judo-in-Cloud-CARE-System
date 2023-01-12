@@ -297,7 +297,8 @@ function toggleScrubbling(e) {
     wasPaused = video.paused;
     video.pause();
   } else {
-    video.currentTime = percent * video.duration;
+    const newCurrentTime = percent * getVideoDuration() + video.buffered.start(0);
+    video.currentTime = newCurrentTime;
     if (!wasPaused) video.play();
   }
 
