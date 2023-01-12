@@ -1,4 +1,4 @@
-const MAXTIME = 1 * 60;
+const MAXTIME = 15 * 60;
 // leave this at max 1 sec. Can probably lower, but maybe performance issues
 const REFRESHRATE = 1 * 1000;
 
@@ -60,7 +60,7 @@ function getWebcamStream() {
   navigator.getUserMedia(
     {
       audio: true,
-      video: true,
+      video: { width: 1920, height: 1080 },
     },
     /** @param {MediaStream} stream */
     (stream) => {
