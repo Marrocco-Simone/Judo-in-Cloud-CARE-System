@@ -1,4 +1,5 @@
-const MAXTIME = 15 * 60;
+const MAXTIME = 20 * 60;
+const videoBitsPerSecond = 2500000 / 4;
 // leave this at max 1 sec. Can probably lower, but maybe performance issues
 const REFRESHRATE = 1 * 1000;
 
@@ -22,8 +23,19 @@ const video = document.querySelector("video");
 const mediaStream = new MediaStream();
 /** source for the video tag */
 const mediaSource = new MediaSource();
+const mimeType = 'video/webm; codecs="vp8, opus"';
 /** saves the webcam stream to various Blobs */
-const mediaRecorder = new MediaRecorder(mediaStream);
+const mediaRecorder = new MediaRecorder(mediaStream, {
+  // audioBitsPerSecond: 128000,
+  videoBitsPerSecond: videoBitsPerSecond,
+});
+
+//log
+const millionFormatter = new Intl.NumberFormat(undefined, {
+  notation: 'scientific',
+});
+console.log(`videoBitsPerSecond: ${millionFormatter.format(mediaRecorder.videoBitsPerSecond)}`);
+
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
 /** @type {Blob[]} */
@@ -36,8 +48,7 @@ getWebcamStream();
 
 // * when mediaSource is ready, create the sourceBuffer
 mediaSource.addEventListener("sourceopen", () => {
-  const type = 'video/webm; codecs="vp8, opus"';
-  sourceBuffer = mediaSource.addSourceBuffer(type);
+  sourceBuffer = mediaSource.addSourceBuffer(mimeType);
   sourceBuffer.mode = "sequence";
   sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
 });
@@ -45,6 +56,7 @@ mediaSource.addEventListener("sourceopen", () => {
 // * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
 mediaRecorder.addEventListener("dataavailable", (e) => {
   const blob = e.data;
+  console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
   arrayOfBlobs.push(blob);
   appendToSourceBuffer();
 });
@@ -99,6 +111,7 @@ function appendToSourceBuffer() {
 
   // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
   if (video.buffered.length && getVideoDuration() > MAXTIME) {
+    console.log("REACHED MAX TIME");
     sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
   }
 }
