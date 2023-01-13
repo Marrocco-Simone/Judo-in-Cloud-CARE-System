@@ -59,16 +59,16 @@ function getWebcamStream() {
 
   navigator.getUserMedia(
     {
-      audio: true,
+      // audio: true,
       video: { width: 1920, height: 1080 },
-      facingMode: { exact: "enviroment" }
+      facingMode: { exact: "enviroment" },
     },
     /** @param {MediaStream} stream */
     (stream) => {
       const videoTrack = stream.getVideoTracks()[0];
-      const audioTrack = stream.getAudioTracks()[0];
+      // const audioTrack = stream.getAudioTracks()[0];
       mediaStream.addTrack(videoTrack);
-      mediaStream.addTrack(audioTrack);
+      // mediaStream.addTrack(audioTrack);
 
       mediaRecorder.start(REFRESHRATE);
     },
@@ -122,7 +122,7 @@ const keyMap = {
 
 document.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
-  if(keyMap.key) {
+  if(keyMap[key]) {
     e.preventDefault();
     keyMap[key]();
   }
