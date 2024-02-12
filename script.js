@@ -23,7 +23,7 @@ const video = document.querySelector("video");
 const mediaStream = new MediaStream();
 /** source for the video tag */
 const mediaSource = new MediaSource();
-const mimeType = 'video/webm; codecs="vp8, opus"';
+const mimeType = 'video/webm; codecs="vp8"';
 /** saves the webcam stream to various Blobs */
 const mediaRecorder = new MediaRecorder(mediaStream, {
   // audioBitsPerSecond: 128000,
@@ -32,9 +32,13 @@ const mediaRecorder = new MediaRecorder(mediaStream, {
 
 //log
 const millionFormatter = new Intl.NumberFormat(undefined, {
-  notation: 'scientific',
+  notation: "scientific",
 });
-console.log(`videoBitsPerSecond: ${millionFormatter.format(mediaRecorder.videoBitsPerSecond)}`);
+console.log(
+  `videoBitsPerSecond: ${millionFormatter.format(
+    mediaRecorder.videoBitsPerSecond
+  )}`
+);
 
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
@@ -135,7 +139,7 @@ const keyMap = {
 
 document.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
-  if(keyMap[key]) {
+  if (keyMap[key]) {
     e.preventDefault();
     keyMap[key]();
   }
