@@ -23,6 +23,9 @@ const video = document.querySelector("video");
 const mediaStream = new MediaStream();
 /** source for the video tag */
 const mediaSource = new MediaSource();
+// * if audio
+// const mimeType = 'video/webm; codecs="vp8, opus"';
+// * no audio
 const mimeType = 'video/webm; codecs="vp8"';
 /** saves the webcam stream to various Blobs */
 const mediaRecorder = new MediaRecorder(mediaStream, {
