@@ -1,7 +1,10 @@
 const MAXTIME = 20 * 60;
-const videoBitsPerSecond = 2500000 / 4;
+// const videoBitsPerSecond = 2500000 / 4;
+const videoBitsPerSecond = 2500000;
 // leave this at max 1 sec. Can probably lower, but maybe performance issues
-const REFRESHRATE = 1 * 1000;
+// const REFRESHRATE = 1 * 1000;
+const REFRESHRATE = 0.25 * 1000;
+const useAudio = true;
 
 const playPauseBtn = document.querySelector(".play-pause-btn");
 const theaterBtn = document.querySelector(".theater-btn");
@@ -16,6 +19,7 @@ const liveDotElem = document.querySelector(".live-dot");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
+const downloadBtn = document.querySelector(".download-btn");
 
 // live
 // * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
@@ -23,15 +27,19 @@ const video = document.querySelector("video");
 const mediaStream = new MediaStream();
 /** source for the video tag */
 const mediaSource = new MediaSource();
-// * if audio
-// const mimeType = 'video/webm; codecs="vp8, opus"';
-// * no audio
-const mimeType = 'video/webm; codecs="vp8"';
+const mimeType = useAudio
+  ? 'video/webm; codecs="vp8, opus"'
+  : 'video/webm; codecs="vp8"';
 /** saves the webcam stream to various Blobs */
-const mediaRecorder = new MediaRecorder(mediaStream, {
-  // audioBitsPerSecond: 128000,
-  videoBitsPerSecond: videoBitsPerSecond,
-});
+const mediaRecorder = new MediaRecorder(
+  mediaStream,
+  useAudio
+    ? {
+        audioBitsPerSecond: 128000,
+        videoBitsPerSecond: videoBitsPerSecond,
+      }
+    : { videoBitsPerSecond: videoBitsPerSecond }
+);
 
 //log
 const millionFormatter = new Intl.NumberFormat(undefined, {
@@ -47,6 +55,7 @@ console.log(
 let sourceBuffer;
 /** @type {Blob[]} */
 const arrayOfBlobs = [];
+let i = 0;
 
 const url = URL.createObjectURL(mediaSource);
 video.src = url;
@@ -78,16 +87,18 @@ function getWebcamStream() {
 
   navigator.getUserMedia(
     {
-      // audio: true,
+      audio: useAudio,
       video: { width: 1920, height: 1080 },
       facingMode: { exact: "enviroment" },
     },
     /** @param {MediaStream} stream */
     (stream) => {
       const videoTrack = stream.getVideoTracks()[0];
-      // const audioTrack = stream.getAudioTracks()[0];
       mediaStream.addTrack(videoTrack);
-      // mediaStream.addTrack(audioTrack);
+      if (useAudio) {
+        const audioTrack = stream.getAudioTracks()[0];
+        mediaStream.addTrack(audioTrack);
+      }
 
       mediaRecorder.start(REFRESHRATE);
     },
@@ -105,9 +116,12 @@ function appendToSourceBuffer() {
   if (
     mediaSource.readyState === "open" &&
     sourceBuffer &&
-    sourceBuffer.updating === false
+    sourceBuffer.updating === false &&
+    !!arrayOfBlobs[i]
   ) {
-    const blob = arrayOfBlobs.shift();
+    const new_blob = arrayOfBlobs[i];
+    i++;
+    const blob = new Blob([new_blob], { type: new_blob.type });
     if (blob && blob.size) {
       blob.arrayBuffer().then((arrayBuffer) => {
         sourceBuffer.appendBuffer(arrayBuffer);
@@ -339,13 +353,39 @@ function getVideoTimelinePercent(e) {
   return percent;
 }
 
-// TODO delete
+function getArrayOfBlobsSizeString() {
+  const kb = Math.floor(
+    arrayOfBlobs.reduce((size, currBlob) => size + currBlob.size, 0) / 1024
+  );
+  return `${kb} kb`;
+}
+
 function superlog() {
   const obj = {
     currentTime: Math.floor(video.currentTime),
     bStart: Math.floor(video.buffered.start(0)),
     bEnd: Math.floor(video.buffered.end(0)),
     bDifference: Math.floor(getVideoDuration()),
+    blobsLenght: arrayOfBlobs.length,
+    blobsSize: getArrayOfBlobsSizeString(),
   };
   console.log(obj);
+}
+
+// * save video
+downloadBtn.addEventListener("click", saveVideo);
+
+function saveVideo() {
+  const blob = new Blob(arrayOfBlobs, { type: "video/webm" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = "recorded-video.webm";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, 100);
 }
