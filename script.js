@@ -1,10 +1,18 @@
 const MAXTIME = 20 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
-// leave this at max 1 sec. Can probably lower, but maybe performance issues
-// const REFRESHRATE = 1 * 1000;
+/** leave this at max 1 sec. Can probably lower, but maybe performance issues */
 const REFRESHRATE = 0.25 * 1000;
+// const REFRESHRATE = 1 * 1000;
 const useAudio = true;
+
+const mimeType = useAudio
+  ? 'video/webm; codecs="vp8, opus"'
+  : 'video/webm; codecs="vp8"';
+
+const millionFormatter = new Intl.NumberFormat(undefined, {
+  notation: "scientific",
+});
 
 const playPauseBtn = document.querySelector(".play-pause-btn");
 const theaterBtn = document.querySelector(".theater-btn");
@@ -21,97 +29,32 @@ const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
 const downloadBtn = document.querySelector(".download-btn");
 
-// live
 // * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
-/** holder of the webcam audio and video stream */
-const mediaStream = new MediaStream();
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * BLOB MANAGEMENT TO THE VIDEO TAG
+
 /** source for the video tag */
 const mediaSource = new MediaSource();
-const mimeType = useAudio
-  ? 'video/webm; codecs="vp8, opus"'
-  : 'video/webm; codecs="vp8"';
-/** saves the webcam stream to various Blobs */
-const mediaRecorder = new MediaRecorder(
-  mediaStream,
-  useAudio
-    ? {
-        audioBitsPerSecond: 128000,
-        videoBitsPerSecond: videoBitsPerSecond,
-      }
-    : { videoBitsPerSecond: videoBitsPerSecond }
-);
-
-//log
-const millionFormatter = new Intl.NumberFormat(undefined, {
-  notation: "scientific",
-});
-console.log(
-  `videoBitsPerSecond: ${millionFormatter.format(
-    mediaRecorder.videoBitsPerSecond
-  )}`
-);
-
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
-/** @type {Blob[]} */
+/** @type {Blob[]} storage for all the recorded blobs */
 const arrayOfBlobs = [];
+/** index of the last blob added */
 let i = 0;
 
 const url = URL.createObjectURL(mediaSource);
 video.src = url;
 
-getWebcamStream();
-
 // * when mediaSource is ready, create the sourceBuffer
 mediaSource.addEventListener("sourceopen", () => {
   sourceBuffer = mediaSource.addSourceBuffer(mimeType);
   sourceBuffer.mode = "sequence";
+  // * when the previous blob has been appended, append a new one
   sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
 });
 
-// * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
-mediaRecorder.addEventListener("dataavailable", (e) => {
-  const blob = e.data;
-  console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
-  arrayOfBlobs.push(blob);
-  appendToSourceBuffer();
-});
-
-// * get the webcam stream, save it to the mediaStream and start the mediaRecorder
-function getWebcamStream() {
-  navigator.getUserMedia =
-    navigator.getUserMedia ||
-    navigator.webkitGetUserMedia ||
-    navigator.mozGetUserMedia ||
-    navigator.msGetUserMedia;
-
-  navigator.getUserMedia(
-    {
-      audio: useAudio,
-      video: { width: 1920, height: 1080 },
-      facingMode: { exact: "enviroment" },
-    },
-    /** @param {MediaStream} stream */
-    (stream) => {
-      const videoTrack = stream.getVideoTracks()[0];
-      mediaStream.addTrack(videoTrack);
-      if (useAudio) {
-        const audioTrack = stream.getAudioTracks()[0];
-        mediaStream.addTrack(audioTrack);
-      }
-
-      mediaRecorder.start(REFRESHRATE);
-    },
-    (err) => {
-      console.log(err);
-      alert(
-        "Assicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system"
-      );
-    }
-  );
-}
-
-// * add to the sourceBuffer the new segment
+/** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
   if (
     mediaSource.readyState === "open" &&
@@ -132,12 +75,70 @@ function appendToSourceBuffer() {
 
   // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
   if (video.buffered.length && getVideoDuration() > MAXTIME) {
-    console.log("REACHED MAX TIME");
+    console.log(
+      `REACHED MAXTIME: ${MAXTIME} (max size: ${getArrayOfBlobsSizeString()})`
+    );
     sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
   }
 }
 
-// keyboard commands
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * RETRIVAL OF THE WEBCAM STREAM
+
+/** holder of the webcam audio and video stream */
+const mediaStream = new MediaStream();
+/** saves the webcam stream to various Blobs */
+const mediaRecorder = new MediaRecorder(
+  mediaStream,
+  useAudio
+    ? {
+        audioBitsPerSecond: 128000,
+        videoBitsPerSecond: videoBitsPerSecond,
+      }
+    : { videoBitsPerSecond: videoBitsPerSecond }
+);
+
+getWebcamStream();
+
+/** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
+function getWebcamStream() {
+  navigator.mediaDevices
+    .getUserMedia({
+      audio: useAudio,
+      video: { width: 1920, height: 1080 },
+      facingMode: { exact: "enviroment" },
+    })
+    .then((stream) => {
+      // todo we can add multiple videotracks in the future
+      const videoTrack = stream.getVideoTracks()[0];
+      mediaStream.addTrack(videoTrack);
+      if (useAudio) {
+        const audioTrack = stream.getAudioTracks()[0];
+        mediaStream.addTrack(audioTrack);
+      }
+
+      mediaRecorder.start(REFRESHRATE);
+    })
+    .catch((err) => {
+      console.log(err);
+      alert(
+        "Assicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system"
+      );
+    });
+}
+
+// * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
+mediaRecorder.addEventListener("dataavailable", (e) => {
+  const blob = e.data;
+  // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
+  arrayOfBlobs.push(blob);
+  appendToSourceBuffer();
+});
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * KEYBOARD AND BUTTONS COMMANDS
+
+/** keyboard commands */
 const keyMap = {
   " ": () => togglePlay(),
   k: () => togglePlay(),
@@ -162,7 +163,9 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// view modes
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * VIEW MODES
+
 theaterBtn.addEventListener("click", toggleTheaterMode);
 fullScreeBtn.addEventListener("click", toggleFullScreenMode);
 
@@ -170,7 +173,6 @@ function toggleTheaterMode() {
   videoContainer.classList.toggle("theater");
 }
 
-// !IMPORTANT FOR JIC
 function toggleFullScreenMode() {
   if (document.fullscreenElement == null) {
     videoContainer.requestFullscreen();
@@ -183,7 +185,9 @@ document.addEventListener("fullscreenchange", () => {
   videoContainer.classList.toggle("full-screen", document.fullscreenElement);
 });
 
-// play/pause
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * PLAY / PAUSE
+
 video.addEventListener("click", togglePlay);
 playPauseBtn.addEventListener("click", togglePlay);
 
@@ -206,7 +210,9 @@ video.addEventListener("pause", () => {
   videoContainer.classList.add("paused");
 });
 
-// volume
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * VOLUME
+
 muteBtn.addEventListener("click", toggleMute);
 volumeSlider.addEventListener("input", (e) => {
   video.volume = e.target.value;
@@ -232,7 +238,9 @@ video.addEventListener("volumechange", () => {
   videoContainer.dataset.volumeLevel = volumeLevel;
 });
 
-// duration
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * DURATION
+
 function getVideoDuration() {
   // this generates an error when starting the app, but it is fine afterward
   try {
@@ -246,7 +254,7 @@ function getCurrentTime() {
   return video.currentTime - video.buffered.start(0);
 }
 
-// called when a new buffer is added
+/** called when a new buffer is added */
 function updateTotalTIme() {
   totalTimeElem.textContent = formatTime(getVideoDuration());
 }
@@ -264,10 +272,14 @@ video.addEventListener("timeupdate", () => {
   liveDotElem.style.setProperty("background-color", liveDotColor);
 });
 
-// !IMPORTANT FOR JIC
 const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
 });
+/**
+ * Transforms a number of seconds in a string of the format hh:mm:ss
+ * @param {number} time in seconds
+ * @returns string as hh:mm:ss
+ */
 function formatTime(time) {
   const seconds = Math.floor(time % 60);
   const minutes = Math.floor(time / 60) % 60;
@@ -360,14 +372,27 @@ function getArrayOfBlobsSizeString() {
   return `${kb} kb`;
 }
 
+let last_initial_time = 0;
 function superlog() {
+  const currentTime = Math.floor(video.currentTime);
+  const bStart = Math.floor(video.buffered.start(0));
+  const bEnd = Math.floor(video.buffered.end(0));
+  const bDifference = Math.floor(getVideoDuration());
+  const lastSize = Math.floor(
+    arrayOfBlobs[arrayOfBlobs.length - 1].size / 1024
+  );
+
+  if (bStart === last_initial_time) return;
+  last_initial_time = bStart;
+
   const obj = {
-    currentTime: Math.floor(video.currentTime),
-    bStart: Math.floor(video.buffered.start(0)),
-    bEnd: Math.floor(video.buffered.end(0)),
-    bDifference: Math.floor(getVideoDuration()),
+    currentTime: formatTime(currentTime),
+    bStart: formatTime(bStart),
+    bEnd: formatTime(bEnd),
+    bDifference: formatTime(bDifference),
     blobsLenght: arrayOfBlobs.length,
     blobsSize: getArrayOfBlobsSizeString(),
+    lastSize: `${lastSize} kb`,
   };
   console.log(obj);
 }
