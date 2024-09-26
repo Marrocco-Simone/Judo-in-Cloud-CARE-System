@@ -524,7 +524,7 @@ function logVideoSituation() {
   const difference = Math.floor(getVideoDuration());
 
   // * when the mediaSource gets cut, log
-  // if (start === last_initial_time) return;
+  if (start === last_initial_time) return;
   last_initial_time = start;
 
   const obj = {
