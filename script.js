@@ -1,9 +1,8 @@
 const MAXTIME = 20 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
-/** leave this at max 1 sec. Can probably lower, but maybe performance issues */
-const REFRESHRATE = 0.25 * 1000;
-// const REFRESHRATE = 1 * 1000;
+/** The blob lenght from a MediaRecorder in milliseconds. Leave this at max 1 sec. Can probably lower, but maybe performance issues */
+const REFRESHRATE = 3 * 1000;
 const useAudio = true;
 
 const mimeType = useAudio
@@ -32,16 +31,173 @@ const downloadBtn = document.querySelector(".download-btn");
 // * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * INDEXDB TO STORE ALL MY BLOBS
+
+const dbName = "blobStoreDB";
+const dbVersion = 1;
+/** @type {IDBDatabase} */
+let db;
+
+// todo instead of deleting the db when starting, we can recover from the last saved?
+deleteDatabase(() => openDbConnection());
+
+/** Open the indexedDB connection */
+function openDbConnection() {
+  const request = indexedDB.open(dbName, dbVersion);
+  request.addEventListener("upgradeneeded", (e) => {
+    db = e.target.result;
+    if (db.objectStoreNames.contains("blobs")) {
+      return;
+    }
+    const blobStore = db.createObjectStore("blobs", {
+      keyPath: "id",
+      autoIncrement: true,
+    });
+    blobStore.createIndex("timestamp", "timestamp", { unique: false });
+  });
+  request.addEventListener("error", (e) => {
+    console.error("Error opening database:", e.target.errorCode);
+  });
+  request.addEventListener("success", (e) => {
+    db = e.target.result;
+    console.log("Database opened successfully.");
+  });
+}
+
+/**
+ * Delete the database
+ * @param {() => void} cb
+ */
+function deleteDatabase(cb) {
+  const request = indexedDB.deleteDatabase(dbName);
+  request.addEventListener("error", (e) =>
+    console.error("Error deleting database:", e.target.errorCode)
+  );
+  request.addEventListener("success", () => {
+    console.log("Database deleted successfully.");
+    cb();
+  });
+}
+
+/**
+ * Store a blob in the indexedDB with a timestamp and a unique id autoincremented
+ * @param {Blob} blob
+ * @param {() => void} cb
+ */
+function storeBlob(blob, cb) {
+  const transaction = db.transaction(["blobs"], "readwrite");
+  const blobStore = transaction.objectStore("blobs");
+
+  const timestamp = new Date().getTime(); // Store current timestamp
+  const blobRecord = { blob, timestamp };
+
+  const request = blobStore.add(blobRecord);
+  request.addEventListener("error", (e) =>
+    console.error("Error storing blob:", e.target.errorCode)
+  );
+  request.addEventListener("success", () => {
+    // console.log("Blob stored successfully.");
+    cb();
+  });
+}
+
+/**
+ * Retrieve a blob from the indexedDB by its id
+ * @param {number} id
+ * @param {(blob: Blob, timestamp: number) => void} cb
+ */
+function getBlobById(id, cb) {
+  const transaction = db.transaction(["blobs"], "readonly");
+  const blobStore = transaction.objectStore("blobs");
+
+  const request = blobStore.get(id);
+  request.addEventListener("error", (e) =>
+    console.error("Error retrieving blob:", e.target.errorCode)
+  );
+  request.addEventListener("success", (e) => {
+    /** @type {{blob: Blob, timestamp: number, id: number}} */
+    const blobRecord = e.target.result;
+    if (blobRecord) {
+      const { blob, timestamp } = blobRecord;
+      // console.log("Blob retrieved:", blobRecord);
+      cb(blob, timestamp);
+    } else {
+      // console.error(`Blob ${id} not found.`);
+    }
+  });
+}
+
+/**
+ * Retrieve a blob from the indexedDB by its timestamp
+ * @param {number} targetTimestamp
+ * @param {(blob: Blob, timestamp: number, id: number) => void} cb
+ */
+function getNearestBlobByTimestamp(targetTimestamp, cb) {
+  const transaction = db.transaction(["blobs"], "readonly");
+  const blobStore = transaction.objectStore("blobs");
+  const index = blobStore.index("timestamp");
+
+  const cursorRequest = index.openCursor(null, "prev");
+  cursorRequest.addEventListener("error", (e) => {
+    console.error("Error searching by timestamp:", e.target.errorCode);
+  });
+  cursorRequest.addEventListener("success", (e) => {
+    /**   @type {IDBCursorWithValue} */
+    const cursor = e.target.result;
+    if (cursor) {
+      /** @type {{blob: Blob, timestamp: number, id: number}} */
+      const blobRecord = cursor.value;
+
+      if (blobRecord.timestamp <= targetTimestamp) {
+        // const closestBlob = blobRecord;
+        // const closestBlobId = cursor.primaryKey;
+        // console.log("Found closest blob:", closestBlob);
+        const { blob, timestamp, id } = blobRecord;
+        cb(blob, timestamp, id);
+        return;
+      } else {
+        cursor.continue();
+      }
+    } else {
+      console.error("No blobs found with a timestamp <=", targetTimestamp);
+    }
+  });
+}
+/**
+ * Retrieve all blobs from the indexedDB between two ids
+ * @param {number} startId
+ * @param {number} endId
+ * @param {(blobs: Blob[]) => void} cb
+ */
+function getArrayOfBlobs(startId, endId, cb) {
+  const transaction = db.transaction(["blobs"], "readonly");
+  const blobStore = transaction.objectStore("blobs");
+
+  const request = blobStore.getAll(IDBKeyRange.bound(startId, endId));
+  request.addEventListener("error", (e) =>
+    console.error("Error retrieving blobs:", e.target.errorCode)
+  );
+  request.addEventListener("success", (e) => {
+    /** @type {{blob: Blob, timestamp: number, id: number}[]} */
+    const blobs = e.target.result;
+    if (blobs.length) {
+      // console.log("Blobs retrieved:", blobs);
+      cb(blobs.map((blobRecord) => blobRecord.blob));
+    } else {
+      console.error(`No blobs found in range ${startId}-${endId}.`);
+    }
+  });
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * BLOB MANAGEMENT TO THE VIDEO TAG
 
 /** source for the video tag */
 const mediaSource = new MediaSource();
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
-/** @type {Blob[]} storage for all the recorded blobs */
-const arrayOfBlobs = [];
-/** index of the last blob added */
-let i = 0;
+/** index of the last blob added in the db. Autoindexing starts at 1 */
+let i = 1;
 
 const url = URL.createObjectURL(mediaSource);
 video.src = url;
@@ -56,13 +212,11 @@ mediaSource.addEventListener("sourceopen", () => {
 
 /** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
-  if (
-    mediaSource.readyState === "open" &&
-    sourceBuffer &&
-    sourceBuffer.updating === false &&
-    !!arrayOfBlobs[i]
-  ) {
-    const new_blob = arrayOfBlobs[i];
+  if (mediaSource.readyState !== "open") return;
+  if (!sourceBuffer) return;
+  if (sourceBuffer.updating) return;
+
+  getBlobById(i, (new_blob) => {
     i++;
     const blob = new Blob([new_blob], { type: new_blob.type });
     if (blob && blob.size) {
@@ -71,15 +225,13 @@ function appendToSourceBuffer() {
         updateTotalTIme();
       });
     }
-  }
 
-  // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
-  if (video.buffered.length && getVideoDuration() > MAXTIME) {
-    console.log(
-      `REACHED MAXTIME: ${MAXTIME} (max size: ${getArrayOfBlobsSizeString()})`
-    );
-    sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
-  }
+    // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
+    if (video.buffered.length && getVideoDuration() > MAXTIME) {
+      console.log(`REACHED MAXTIME: ${MAXTIME}`);
+      sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
+    }
+  });
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -131,8 +283,7 @@ function getWebcamStream() {
 mediaRecorder.addEventListener("dataavailable", (e) => {
   const blob = e.data;
   // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
-  arrayOfBlobs.push(blob);
-  appendToSourceBuffer();
+  storeBlob(blob, () => appendToSourceBuffer());
 });
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -260,7 +411,7 @@ function updateTotalTIme() {
 }
 
 video.addEventListener("timeupdate", () => {
-  superlog();
+  logVideoSituation();
   const newCurrentTime = getCurrentTime();
   const newTotalTime = getVideoDuration();
   currentTimeElem.textContent = formatTime(newCurrentTime);
@@ -365,34 +516,22 @@ function getVideoTimelinePercent(e) {
   return percent;
 }
 
-function getArrayOfBlobsSizeString() {
-  const kb = Math.floor(
-    arrayOfBlobs.reduce((size, currBlob) => size + currBlob.size, 0) / 1024
-  );
-  return `${kb} kb`;
-}
-
 let last_initial_time = 0;
-function superlog() {
+function logVideoSituation() {
   const currentTime = Math.floor(video.currentTime);
-  const bStart = Math.floor(video.buffered.start(0));
-  const bEnd = Math.floor(video.buffered.end(0));
-  const bDifference = Math.floor(getVideoDuration());
-  const lastSize = Math.floor(
-    arrayOfBlobs[arrayOfBlobs.length - 1].size / 1024
-  );
+  const start = Math.floor(video.buffered.start(0));
+  const end = Math.floor(video.buffered.end(0));
+  const difference = Math.floor(getVideoDuration());
 
-  if (bStart === last_initial_time) return;
-  last_initial_time = bStart;
+  // * when the mediaSource gets cut, log
+  // if (start === last_initial_time) return;
+  last_initial_time = start;
 
   const obj = {
     currentTime: formatTime(currentTime),
-    bStart: formatTime(bStart),
-    bEnd: formatTime(bEnd),
-    bDifference: formatTime(bDifference),
-    blobsLenght: arrayOfBlobs.length,
-    blobsSize: getArrayOfBlobsSizeString(),
-    lastSize: `${lastSize} kb`,
+    start: formatTime(start),
+    end: formatTime(end),
+    difference: formatTime(difference),
   };
   console.log(obj);
 }
@@ -401,16 +540,18 @@ function superlog() {
 downloadBtn.addEventListener("click", saveVideo);
 
 function saveVideo() {
-  const blob = new Blob(arrayOfBlobs, { type: "video/webm" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.style.display = "none";
-  a.href = url;
-  a.download = "recorded-video.webm";
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  }, 100);
+  getArrayOfBlobs(0, i, (arrayOfBlobs) => {
+    const blob = new Blob(arrayOfBlobs, { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = "recorded-video.webm";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+  });
 }
