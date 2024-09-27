@@ -1,8 +1,10 @@
 const MAXTIME = 20 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
-/** The blob lenght from a MediaRecorder in milliseconds. Leave this at max 1 sec. Can probably lower, but maybe performance issues */
-const REFRESHRATE = 3 * 1000;
+/** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
+const REFRESHRATE = 1 * 1000;
+/** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
+const DELAY_MULTIPLIER = 3;
 const useAudio = true;
 
 const mimeType = useAudio
@@ -95,8 +97,10 @@ function storeBlob(blob, cb) {
   request.addEventListener("error", (e) =>
     console.error("Error storing blob:", e.target.errorCode)
   );
-  request.addEventListener("success", () => {
-    // console.log("Blob stored successfully.");
+  request.addEventListener("success", (e) => {
+    /** @type {number} */
+    const blob_id = e.target.result;
+    console.log("Blob stored successfully:", blob_id);
     cb();
   });
 }
@@ -118,11 +122,14 @@ function getBlobById(id, cb) {
     /** @type {{blob: Blob, timestamp: number, id: number}} */
     const blobRecord = e.target.result;
     if (blobRecord) {
-      const { blob, timestamp } = blobRecord;
-      // console.log("Blob retrieved:", blobRecord);
+      const { blob, timestamp, id } = blobRecord;
+      console.log("Blob retrieved:", {
+        id,
+        timestamp: formatTimestamp(timestamp),
+      });
       cb(blob, timestamp);
     } else {
-      // console.error(`Blob ${id} not found.`);
+      console.error(`Blob ${id} not found.`);
     }
   });
 }
@@ -149,9 +156,6 @@ function getNearestBlobByTimestamp(targetTimestamp, cb) {
       const blobRecord = cursor.value;
 
       if (blobRecord.timestamp <= targetTimestamp) {
-        // const closestBlob = blobRecord;
-        // const closestBlobId = cursor.primaryKey;
-        // console.log("Found closest blob:", closestBlob);
         const { blob, timestamp, id } = blobRecord;
         cb(blob, timestamp, id);
         return;
@@ -207,7 +211,9 @@ mediaSource.addEventListener("sourceopen", () => {
   sourceBuffer = mediaSource.addSourceBuffer(mimeType);
   sourceBuffer.mode = "sequence";
   // * when the previous blob has been appended, append a new one
-  sourceBuffer.addEventListener("updateend", appendToSourceBuffer);
+  sourceBuffer.addEventListener("updateend", () =>
+    setTimeout(appendToSourceBuffer, REFRESHRATE)
+  );
 });
 
 /** add to the sourceBuffer the new segment */
@@ -237,19 +243,6 @@ function appendToSourceBuffer() {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * RETRIVAL OF THE WEBCAM STREAM
 
-/** holder of the webcam audio and video stream */
-const mediaStream = new MediaStream();
-/** saves the webcam stream to various Blobs */
-const mediaRecorder = new MediaRecorder(
-  mediaStream,
-  useAudio
-    ? {
-        audioBitsPerSecond: 128000,
-        videoBitsPerSecond: videoBitsPerSecond,
-      }
-    : { videoBitsPerSecond: videoBitsPerSecond }
-);
-
 getWebcamStream();
 
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
@@ -263,13 +256,35 @@ function getWebcamStream() {
     .then((stream) => {
       // todo we can add multiple videotracks in the future
       const videoTrack = stream.getVideoTracks()[0];
+      /** holder of the webcam audio and video stream */
+      const mediaStream = new MediaStream();
       mediaStream.addTrack(videoTrack);
       if (useAudio) {
         const audioTrack = stream.getAudioTracks()[0];
         mediaStream.addTrack(audioTrack);
       }
 
+      /** saves the webcam stream to various Blobs */
+      const mediaRecorder = new MediaRecorder(
+        mediaStream,
+        useAudio
+          ? {
+              audioBitsPerSecond: 128000,
+              videoBitsPerSecond: videoBitsPerSecond,
+            }
+          : { videoBitsPerSecond: videoBitsPerSecond }
+      );
+
       mediaRecorder.start(REFRESHRATE);
+
+      // * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
+      mediaRecorder.addEventListener("dataavailable", (e) => {
+        const blob = e.data;
+        // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
+        storeBlob(blob, () => {});
+      });
+
+      setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
     .catch((err) => {
       console.log(err);
@@ -278,13 +293,6 @@ function getWebcamStream() {
       );
     });
 }
-
-// * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
-mediaRecorder.addEventListener("dataavailable", (e) => {
-  const blob = e.data;
-  // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
-  storeBlob(blob, () => appendToSourceBuffer());
-});
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * KEYBOARD AND BUTTONS COMMANDS
@@ -435,6 +443,27 @@ function formatTime(time) {
   const seconds = Math.floor(time % 60);
   const minutes = Math.floor(time / 60) % 60;
   const hours = Math.floor(time / 60 / 60);
+
+  let returnString = "";
+  if (hours !== 0) {
+    returnString += `${hours}:`;
+  }
+  returnString += `${leadingZeroFormatter.format(
+    minutes
+  )}:${leadingZeroFormatter.format(seconds)}`;
+
+  return returnString;
+}
+/**
+ * Transforms a timestamp in a string of the format hh:mm:ss
+ * @param {number} timestamp in milliseconds from 01/01/1970
+ * @returns string as hh:mm:ss
+ */
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  const seconds = date.getSeconds();
+  const minutes = date.getMinutes();
+  const hours = date.getHours();
 
   let returnString = "";
   if (hours !== 0) {
