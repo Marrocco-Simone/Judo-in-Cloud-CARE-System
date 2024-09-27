@@ -1,4 +1,4 @@
-const MAXTIME = 20 * 60;
+const MAXTIME = 3 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
@@ -29,6 +29,13 @@ const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
 const downloadBtn = document.querySelector(".download-btn");
+
+/** recording starting timestamp */
+let startTimestamp = 0;
+/** recording last timestamp */
+let lastTimestamp = 0;
+/** selected curring timestamp */
+let currentTimestamp = 0;
 
 // * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
 
@@ -68,7 +75,7 @@ function openDbConnection() {
 
 /**
  * Delete the database
- * @param {() => void} cb
+ * @param {undefined | () => void} cb
  */
 function deleteDatabase(cb) {
   const request = indexedDB.deleteDatabase(dbName);
@@ -77,14 +84,14 @@ function deleteDatabase(cb) {
   );
   request.addEventListener("success", () => {
     console.log("Database deleted successfully.");
-    cb();
+    if (cb) cb();
   });
 }
 
 /**
  * Store a blob in the indexedDB with a timestamp and a unique id autoincremented
  * @param {Blob} blob
- * @param {() => void} cb
+ * @param {undefined | () => void} cb
  */
 function storeBlob(blob, cb) {
   const transaction = db.transaction(["blobs"], "readwrite");
@@ -99,9 +106,14 @@ function storeBlob(blob, cb) {
   );
   request.addEventListener("success", (e) => {
     /** @type {number} */
-    const blob_id = e.target.result;
-    console.log("Blob stored successfully:", blob_id);
-    cb();
+    const id = e.target.result;
+    console.log("Blob stored successfully:", {
+      id,
+      timestamp: formatTimestamp(timestamp),
+    });
+    if (!startTimestamp) startTimestamp = timestamp;
+    lastTimestamp = timestamp;
+    if (cb) cb();
   });
 }
 
@@ -196,41 +208,51 @@ function getArrayOfBlobs(startId, endId, cb) {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * BLOB MANAGEMENT TO THE VIDEO TAG
 
-/** source for the video tag */
-const mediaSource = new MediaSource();
+/** source for the video tag @type {MediaSource} */
+let mediaSource;
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
 /** index of the last blob added in the db. Autoindexing starts at 1 */
 let i = 1;
 
-const url = URL.createObjectURL(mediaSource);
-video.src = url;
+function createMediasource() {
+  console.log("Creating mediaSource");
+  mediaSource = new MediaSource();
+  const url = URL.createObjectURL(mediaSource);
+  video.src = url;
 
-// * when mediaSource is ready, create the sourceBuffer
-mediaSource.addEventListener("sourceopen", () => {
-  sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-  sourceBuffer.mode = "sequence";
-  // * when the previous blob has been appended, append a new one
-  sourceBuffer.addEventListener("updateend", () =>
-    setTimeout(appendToSourceBuffer, REFRESHRATE)
-  );
-});
+  // * when mediaSource is ready, create the sourceBuffer
+  mediaSource.addEventListener("sourceopen", () => {
+    sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+    sourceBuffer.mode = "sequence";
+    // * when the previous blob has been appended, append a new one
+    sourceBuffer.addEventListener("updateend", () =>
+      setTimeout(appendToSourceBuffer, REFRESHRATE)
+    );
+    sourceBuffer.addEventListener("error", (e) => {
+      console.error("Error with sourceBuffer:", e);
+    });
+  });
+}
+createMediasource();
 
 /** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
+  if (!mediaSource) return;
   if (mediaSource.readyState !== "open") return;
   if (!sourceBuffer) return;
   if (sourceBuffer.updating) return;
 
-  getBlobById(i, (new_blob) => {
+  getBlobById(i, (blob, timestamp) => {
     i++;
-    const blob = new Blob([new_blob], { type: new_blob.type });
-    if (blob && blob.size) {
-      blob.arrayBuffer().then((arrayBuffer) => {
+    blob
+      .arrayBuffer()
+      .then((arrayBuffer) => {
         sourceBuffer.appendBuffer(arrayBuffer);
-        updateTotalTIme();
-      });
-    }
+        currentTimestamp = timestamp;
+        updateTotalTime();
+      })
+      .catch((e) => console.error("Error appending blob to sourceBuffer:", e));
 
     // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
     if (video.buffered.length && getVideoDuration() > MAXTIME) {
@@ -281,7 +303,7 @@ function getWebcamStream() {
       mediaRecorder.addEventListener("dataavailable", (e) => {
         const blob = e.data;
         // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
-        storeBlob(blob, () => {});
+        storeBlob(blob);
       });
 
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
@@ -355,13 +377,6 @@ function togglePlay() {
 }
 
 video.addEventListener("play", () => {
-  // this generates an error when starting the app, but it is fine afterward
-  try {
-    if (video.currentTime < video.buffered.start(0)) {
-      returnLive();
-    }
-  } catch (e) {}
-
   videoContainer.classList.remove("paused");
 });
 
@@ -401,28 +416,25 @@ video.addEventListener("volumechange", () => {
 // * DURATION
 
 function getVideoDuration() {
-  // this generates an error when starting the app, but it is fine afterward
-  try {
-    return video.buffered.end(0) - video.buffered.start(0);
-  } catch (e) {
-    return 0;
-  }
+  return (lastTimestamp - startTimestamp) / 1000;
 }
 
 function getCurrentTime() {
-  return video.currentTime - video.buffered.start(0);
+  return (currentTimestamp - startTimestamp) / 1000;
 }
 
 /** called when a new buffer is added */
-function updateTotalTIme() {
-  totalTimeElem.textContent = formatTime(getVideoDuration());
+function updateTotalTime() {
+  const startString = formatTimestamp(startTimestamp);
+  const lastString = formatTimestamp(lastTimestamp);
+  totalTimeElem.textContent = `${startString} - ${lastString}`;
 }
 
 video.addEventListener("timeupdate", () => {
   logVideoSituation();
   const newCurrentTime = getCurrentTime();
   const newTotalTime = getVideoDuration();
-  currentTimeElem.textContent = formatTime(newCurrentTime);
+  currentTimeElem.textContent = formatTimestamp(currentTimestamp);
 
   const percent = newCurrentTime / newTotalTime;
   timelineContainer.style.setProperty("--progress-position", percent);
@@ -476,15 +488,23 @@ function formatTimestamp(timestamp) {
   return returnString;
 }
 
+function moveToTimestamp(timestamp) {
+  if (timestamp > lastTimestamp) return returnLive();
+  if (timestamp < startTimestamp) timestamp = startTimestamp;
+  getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
+    i = id;
+  });
+}
+
 function skip(duration) {
-  video.currentTime += duration;
+  moveToTimestamp(currentTimestamp + duration * 1000);
 }
 
 // return live
 liveBtnElem.addEventListener("click", returnLive);
 
 function returnLive() {
-  video.currentTime = video.buffered.end(0);
+  moveToTimestamp(lastTimestamp - REFRESHRATE * DELAY_MULTIPLIER);
 }
 
 // playback speed
@@ -518,9 +538,9 @@ function toggleScrubbling(e) {
     wasPaused = video.paused;
     video.pause();
   } else {
-    const newCurrentTime =
-      percent * getVideoDuration() + video.buffered.start(0);
-    video.currentTime = newCurrentTime;
+    const newCurrentTimestamp =
+      percent * getVideoDuration() * 1000 + startTimestamp;
+    moveToTimestamp(newCurrentTimestamp);
     if (!wasPaused) video.play();
   }
 
