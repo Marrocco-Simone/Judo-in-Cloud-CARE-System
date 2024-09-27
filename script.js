@@ -373,7 +373,11 @@ video.addEventListener("click", togglePlay);
 playPauseBtn.addEventListener("click", togglePlay);
 
 function togglePlay() {
-  video.paused ? video.play() : video.pause();
+  if (!video.paused) {
+    video.pause();
+  } else {
+    video.play().catch(console.error);
+  }
 }
 
 video.addEventListener("play", () => {
@@ -431,7 +435,7 @@ function updateTotalTime() {
 }
 
 video.addEventListener("timeupdate", () => {
-  logVideoSituation();
+  // logVideoSituation();
   const newCurrentTime = getCurrentTime();
   const newTotalTime = getVideoDuration();
   currentTimeElem.textContent = formatTimestamp(currentTimestamp);
@@ -541,7 +545,7 @@ function toggleScrubbling(e) {
     const newCurrentTimestamp =
       percent * getVideoDuration() * 1000 + startTimestamp;
     moveToTimestamp(newCurrentTimestamp);
-    if (!wasPaused) video.play();
+    if (!wasPaused) togglePlay();
   }
 
   handleTimelineUpdate(e);
@@ -565,25 +569,25 @@ function getVideoTimelinePercent(e) {
   return percent;
 }
 
-let last_initial_time = 0;
-function logVideoSituation() {
-  const currentTime = Math.floor(video.currentTime);
-  const start = Math.floor(video.buffered.start(0));
-  const end = Math.floor(video.buffered.end(0));
-  const difference = Math.floor(getVideoDuration());
+// let last_initial_time = 0;
+// function logVideoSituation() {
+//   const currentTime = Math.floor(video.currentTime);
+//   const start = Math.floor(video.buffered.start(0));
+//   const end = Math.floor(video.buffered.end(0));
+//   const difference = Math.floor(getVideoDuration());
 
-  // * when the mediaSource gets cut, log
-  if (start === last_initial_time) return;
-  last_initial_time = start;
+//   // * when the mediaSource gets cut, log
+//   if (start === last_initial_time) return;
+//   last_initial_time = start;
 
-  const obj = {
-    currentTime: formatTime(currentTime),
-    start: formatTime(start),
-    end: formatTime(end),
-    difference: formatTime(difference),
-  };
-  console.log(obj);
-}
+//   const obj = {
+//     currentTime: formatTime(currentTime),
+//     start: formatTime(start),
+//     end: formatTime(end),
+//     difference: formatTime(difference),
+//   };
+//   console.log(obj);
+// }
 
 // * save video
 downloadBtn.addEventListener("click", saveVideo);
