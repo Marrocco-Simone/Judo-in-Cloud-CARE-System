@@ -211,32 +211,34 @@ function getArrayOfBlobs(startId, endId, cb) {
 // * BLOB MANAGEMENT TO THE VIDEO TAG
 
 /** source for the video tag @type {MediaSource} */
-let mediaSource;
+const mediaSource = new MediaSource();
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
 /** index of the last blob added in the db. Autoindexing starts at 1 */
 let i = 1;
 
-function createMediasource() {
-  console.log("Creating mediaSource");
-  mediaSource = new MediaSource();
-  const url = URL.createObjectURL(mediaSource);
-  video.src = url;
+const url = URL.createObjectURL(mediaSource);
+video.src = url;
 
-  // * when mediaSource is ready, create the sourceBuffer
-  mediaSource.addEventListener("sourceopen", () => {
-    sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-    sourceBuffer.mode = "sequence";
-    // * when the previous blob has been appended, append a new one
-    sourceBuffer.addEventListener("updateend", () =>
-      setTimeout(appendToSourceBuffer, REFRESHRATE)
-    );
-    sourceBuffer.addEventListener("error", (e) => {
-      console.error("Error with sourceBuffer:", e);
-    });
+// * when mediaSource is ready, create the sourceBuffer
+mediaSource.addEventListener("sourceopen", createSourceBuffer);
+
+function createSourceBuffer() {
+  if (sourceBuffer) {
+    mediaSource.removeSourceBuffer(sourceBuffer);
+    sourceBuffer = null;
+  }
+  console.log("Creating sourceBuffer with mimeType:", mimeType);
+  sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+  sourceBuffer.mode = "sequence";
+  // * when the previous blob has been appended, append a new one
+  sourceBuffer.addEventListener("updateend", () =>
+    setTimeout(appendToSourceBuffer, REFRESHRATE)
+  );
+  sourceBuffer.addEventListener("error", (e) => {
+    console.error("Error with sourceBuffer:", e);
   });
 }
-createMediasource();
 
 /** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
@@ -499,6 +501,7 @@ function moveToTimestamp(timestamp) {
   if (timestamp < startTimestamp) timestamp = startTimestamp;
   getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
     i = id;
+    createSourceBuffer();
   });
 }
 
