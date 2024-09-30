@@ -1,10 +1,9 @@
-const MAXTIME = 3 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
-const DELAY_MULTIPLIER = 3;
+const DELAY_MULTIPLIER = 2;
 const useAudio = true;
 
 const mimeType = useAudio
@@ -121,15 +120,17 @@ function storeBlob(blob, cb) {
  * Retrieve a blob from the indexedDB by its id
  * @param {number} id
  * @param {(blob: Blob, timestamp: number) => void} cb
+ * @param {() => void} errorCb
  */
-function getBlobById(id, cb) {
+function getBlobById(id, cb, errorCb) {
   const transaction = db.transaction(["blobs"], "readonly");
   const blobStore = transaction.objectStore("blobs");
 
   const request = blobStore.get(id);
-  request.addEventListener("error", (e) =>
-    console.error("Error retrieving blob:", e.target.errorCode)
-  );
+  request.addEventListener("error", (e) => {
+    console.error("Error retrieving blob:", e.target.errorCode);
+    errorCb();
+  });
   request.addEventListener("success", (e) => {
     /** @type {{blob: Blob, timestamp: number, id: number}} */
     const blobRecord = e.target.result;
@@ -142,6 +143,7 @@ function getBlobById(id, cb) {
       cb(blob, timestamp);
     } else {
       console.error(`Blob ${id} not found.`);
+      errorCb();
     }
   });
 }
@@ -243,23 +245,23 @@ function appendToSourceBuffer() {
   if (!sourceBuffer) return;
   if (sourceBuffer.updating) return;
 
-  getBlobById(i, (blob, timestamp) => {
-    i++;
-    blob
-      .arrayBuffer()
-      .then((arrayBuffer) => {
-        sourceBuffer.appendBuffer(arrayBuffer);
-        currentTimestamp = timestamp;
-        updateTotalTime();
-      })
-      .catch((e) => console.error("Error appending blob to sourceBuffer:", e));
-
-    // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
-    if (video.buffered.length && getVideoDuration() > MAXTIME) {
-      console.log(`REACHED MAXTIME: ${MAXTIME}`);
-      sourceBuffer.remove(0, video.buffered.end(0) - MAXTIME);
-    }
-  });
+  getBlobById(
+    i,
+    (blob, timestamp) => {
+      i++;
+      blob
+        .arrayBuffer()
+        .then((arrayBuffer) => {
+          sourceBuffer.appendBuffer(arrayBuffer);
+          currentTimestamp = timestamp;
+          updateTotalTime();
+        })
+        .catch((e) =>
+          console.error("Error appending blob to sourceBuffer:", e)
+        );
+    },
+    () => setTimeout(appendToSourceBuffer, REFRESHRATE)
+  );
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
