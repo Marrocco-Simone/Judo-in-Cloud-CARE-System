@@ -26,7 +26,6 @@ const liveBtnElem = document.querySelector(".live-btn");
 const liveDotElem = document.querySelector(".live-dot");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
-const video = document.querySelector("video");
 const downloadBtn = document.querySelector(".download-btn");
 
 /** recording starting timestamp */
@@ -106,10 +105,10 @@ function storeBlob(blob, cb) {
   request.addEventListener("success", (e) => {
     /** @type {number} */
     const id = e.target.result;
-    console.log("Blob stored successfully:", {
-      id,
-      timestamp: formatTimestamp(timestamp),
-    });
+    // console.log("Blob stored successfully:", {
+    //   id,
+    //   timestamp: formatTimestamp(timestamp),
+    // });
     if (!startTimestamp) startTimestamp = timestamp;
     lastTimestamp = timestamp;
     if (cb) cb();
@@ -136,10 +135,10 @@ function getBlobById(id, cb, errorCb) {
     const blobRecord = e.target.result;
     if (blobRecord) {
       const { blob, timestamp, id } = blobRecord;
-      console.log("Blob retrieved:", {
-        id,
-        timestamp: formatTimestamp(timestamp),
-      });
+      // console.log("Blob retrieved:", {
+      //   id,
+      //   timestamp: formatTimestamp(timestamp),
+      // });
       cb(blob, timestamp);
     } else {
       console.error(`Blob ${id} not found.`);
@@ -216,19 +215,32 @@ let mediaSource;
 let sourceBuffer;
 /** index of the last blob added in the db. Autoindexing starts at 1 */
 let i = 1;
+/** @type {HTMLVideoElement} */
+let video;
 
-createMediaSource();
+createVideoElement();
+
+function createVideoElement() {
+  if (video) {
+    try {
+      console.log("Removing previous video element");
+      mediaSource.removeSourceBuffer(sourceBuffer);
+      sourceBuffer = null;
+      mediaSource.endOfStream();
+      mediaSource = null;
+      videoContainer.removeChild(video);
+    } catch (e) {
+      console.error("Error removing previous video element:", e);
+    }
+  }
+  console.log("Creating video element");
+  video = videoContainer.appendChild(document.createElement("video"));
+  addVideoEvents();
+  createMediaSource();
+  setTimeout(() => video.play().catch(console.error), REFRESHRATE);
+}
 
 function createMediaSource() {
-  while (sourceBuffer && sourceBuffer.updating) {
-    console.log("Waiting for sourceBuffer to finish updating");
-  }
-  if (mediaSource) {
-    mediaSource.removeSourceBuffer(sourceBuffer);
-    sourceBuffer = null;
-    mediaSource.endOfStream();
-    mediaSource = null;
-  }
   console.log("Creating mediaSource");
   mediaSource = new MediaSource();
 
@@ -240,13 +252,9 @@ function createMediaSource() {
 }
 
 function createSourceBuffer() {
-  if (sourceBuffer) {
-    mediaSource.removeSourceBuffer(sourceBuffer);
-    sourceBuffer = null;
-  }
   console.log("Creating sourceBuffer with mimeType:", mimeType);
   sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-  sourceBuffer.mode = "sequence";
+  sourceBuffer.mode = "segments";
   // * when the previous blob has been appended, append a new one
   sourceBuffer.addEventListener("updateend", () =>
     setTimeout(appendToSourceBuffer, REFRESHRATE)
@@ -280,6 +288,17 @@ function appendToSourceBuffer() {
     },
     () => setTimeout(appendToSourceBuffer, REFRESHRATE)
   );
+}
+
+function moveToTimestamp(timestamp) {
+  if (timestamp > lastTimestamp) return returnLive();
+  if (timestamp < startTimestamp) timestamp = startTimestamp;
+
+  getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
+    i = id;
+    createVideoElement();
+    setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
+  });
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -389,8 +408,52 @@ document.addEventListener("fullscreenchange", () => {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * PLAY / PAUSE
 
-video.addEventListener("click", togglePlay);
-playPauseBtn.addEventListener("click", togglePlay);
+function addVideoEvents() {
+  video.addEventListener("click", togglePlay);
+  playPauseBtn.addEventListener("click", togglePlay);
+
+  video.addEventListener("play", () => {
+    videoContainer.classList.remove("paused");
+  });
+
+  video.addEventListener("pause", () => {
+    videoContainer.classList.add("paused");
+  });
+
+  muteBtn.addEventListener("click", toggleMute);
+  volumeSlider.addEventListener("input", (e) => {
+    video.volume = e.target.value;
+    video.muted = e.target.value === 0;
+  });
+
+  video.addEventListener("volumechange", () => {
+    volumeSlider.value = video.volume;
+    let volumeLevel;
+    if (video.muted || video.volume === 0) {
+      volumeSlider.value = 0;
+      volumeLevel = "muted";
+    } else if (video.volume >= 0.5) {
+      volumeLevel = "high";
+    } else {
+      volumeLevel = "low";
+    }
+
+    videoContainer.dataset.volumeLevel = volumeLevel;
+  });
+
+  video.addEventListener("timeupdate", () => {
+    // logVideoSituation();
+    const newCurrentTime = getCurrentTime();
+    const newTotalTime = getVideoDuration();
+    currentTimeElem.textContent = formatTimestamp(currentTimestamp);
+
+    const percent = newCurrentTime / newTotalTime;
+    timelineContainer.style.setProperty("--progress-position", percent);
+
+    const liveDotColor = percent > 0.95 ? "red" : "#bbb";
+    liveDotElem.style.setProperty("background-color", liveDotColor);
+  });
+}
 
 function togglePlay() {
   if (!video.paused) {
@@ -400,41 +463,12 @@ function togglePlay() {
   }
 }
 
-video.addEventListener("play", () => {
-  videoContainer.classList.remove("paused");
-});
-
-video.addEventListener("pause", () => {
-  videoContainer.classList.add("paused");
-});
-
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * VOLUME
-
-muteBtn.addEventListener("click", toggleMute);
-volumeSlider.addEventListener("input", (e) => {
-  video.volume = e.target.value;
-  video.muted = e.target.value === 0;
-});
 
 function toggleMute() {
   video.muted = !video.muted;
 }
-
-video.addEventListener("volumechange", () => {
-  volumeSlider.value = video.volume;
-  let volumeLevel;
-  if (video.muted || video.volume === 0) {
-    volumeSlider.value = 0;
-    volumeLevel = "muted";
-  } else if (video.volume >= 0.5) {
-    volumeLevel = "high";
-  } else {
-    volumeLevel = "low";
-  }
-
-  videoContainer.dataset.volumeLevel = volumeLevel;
-});
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * DURATION
@@ -453,19 +487,6 @@ function updateTotalTime() {
   const lastString = formatTimestamp(lastTimestamp);
   totalTimeElem.textContent = `${startString} - ${lastString}`;
 }
-
-video.addEventListener("timeupdate", () => {
-  // logVideoSituation();
-  const newCurrentTime = getCurrentTime();
-  const newTotalTime = getVideoDuration();
-  currentTimeElem.textContent = formatTimestamp(currentTimestamp);
-
-  const percent = newCurrentTime / newTotalTime;
-  timelineContainer.style.setProperty("--progress-position", percent);
-
-  const liveDotColor = percent > 0.95 ? "red" : "#bbb";
-  liveDotElem.style.setProperty("background-color", liveDotColor);
-});
 
 const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
@@ -512,15 +533,6 @@ function formatTimestamp(timestamp) {
   return returnString;
 }
 
-function moveToTimestamp(timestamp) {
-  if (timestamp > lastTimestamp) return returnLive();
-  if (timestamp < startTimestamp) timestamp = startTimestamp;
-  getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
-    i = id;
-    createSourceBuffer();
-  });
-}
-
 function skip(duration) {
   moveToTimestamp(currentTimestamp + duration * 1000);
 }
@@ -553,7 +565,7 @@ document.addEventListener("mousemove", (e) => {
 });
 
 let isScrubbing = false;
-let wasPaused = video.paused;
+let wasPaused = video?.paused ?? true;
 function toggleScrubbling(e) {
   const percent = getVideoTimelinePercent(e);
   isScrubbing = (e.buttons & 1) === 1;
