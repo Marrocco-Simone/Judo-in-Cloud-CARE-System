@@ -211,17 +211,33 @@ function getArrayOfBlobs(startId, endId, cb) {
 // * BLOB MANAGEMENT TO THE VIDEO TAG
 
 /** source for the video tag @type {MediaSource} */
-const mediaSource = new MediaSource();
+let mediaSource;
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
 /** index of the last blob added in the db. Autoindexing starts at 1 */
 let i = 1;
 
-const url = URL.createObjectURL(mediaSource);
-video.src = url;
+createMediaSource();
 
-// * when mediaSource is ready, create the sourceBuffer
-mediaSource.addEventListener("sourceopen", createSourceBuffer);
+function createMediaSource() {
+  while (sourceBuffer && sourceBuffer.updating) {
+    console.log("Waiting for sourceBuffer to finish updating");
+  }
+  if (mediaSource) {
+    mediaSource.removeSourceBuffer(sourceBuffer);
+    sourceBuffer = null;
+    mediaSource.endOfStream();
+    mediaSource = null;
+  }
+  console.log("Creating mediaSource");
+  mediaSource = new MediaSource();
+
+  const url = URL.createObjectURL(mediaSource);
+  video.src = url;
+
+  // * when mediaSource is ready, create the sourceBuffer
+  mediaSource.addEventListener("sourceopen", createSourceBuffer);
+}
 
 function createSourceBuffer() {
   if (sourceBuffer) {
