@@ -1,7 +1,7 @@
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
-const REFRESHRATE = 1 * 1000;
+const REFRESHRATE = 4 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
 const DELAY_MULTIPLIER = 2;
 const useAudio = true;
@@ -295,9 +295,31 @@ function moveToTimestamp(timestamp) {
   if (timestamp < startTimestamp) timestamp = startTimestamp;
 
   getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
-    i = id;
-    createVideoElement();
-    setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
+    // i = id;
+    // createVideoElement();
+    // setTimeout(appendToSourceBuffer, REFRESHRATE);
+
+    // ! the real problem: Blobs are not indipendent, I cannot load any blob
+    console.log("creating new video element");
+    const video = videoContainer.appendChild(document.createElement("video"));
+    const mediaSource = new MediaSource();
+    const url = URL.createObjectURL(mediaSource);
+    video.src = url;
+
+    console.log(blob);
+
+    // * when mediaSource is ready, create the sourceBuffer
+    mediaSource.addEventListener("sourceopen", () => {
+      const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+      sourceBuffer.mode = "segments";
+      blob.arrayBuffer().then((arrayBuffer) => {
+        console.log(arrayBuffer);
+        sourceBuffer.appendBuffer(arrayBuffer);
+      });
+      // * only works if it is the first blob
+      setTimeout(() => video.play().catch(console.error), 1000);
+      setTimeout(() => videoContainer.removeChild(video), 10000);
+    });
   });
 }
 
