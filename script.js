@@ -1,9 +1,9 @@
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
-const REFRESHRATE = 4 * 1000;
+const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
-const DELAY_MULTIPLIER = 2;
+const DELAY_MULTIPLIER = 3;
 const useAudio = true;
 
 const mimeType = useAudio
@@ -105,10 +105,10 @@ function storeBlob(blob, cb) {
   request.addEventListener("success", (e) => {
     /** @type {number} */
     const id = e.target.result;
-    // console.log("Blob stored successfully:", {
-    //   id,
-    //   timestamp: formatTimestamp(timestamp),
-    // });
+    console.log("Blob stored successfully:", {
+      id,
+      timestamp: formatTimestamp(timestamp, true),
+    });
     if (!startTimestamp) startTimestamp = timestamp;
     lastTimestamp = timestamp;
     if (cb) cb();
@@ -135,10 +135,10 @@ function getBlobById(id, cb, errorCb) {
     const blobRecord = e.target.result;
     if (blobRecord) {
       const { blob, timestamp, id } = blobRecord;
-      // console.log("Blob retrieved:", {
-      //   id,
-      //   timestamp: formatTimestamp(timestamp),
-      // });
+      console.log("Blob retrieved:", {
+        id,
+        timestamp: formatTimestamp(timestamp, true),
+      });
       cb(blob, timestamp);
     } else {
       console.error(`Blob ${id} not found.`);
@@ -220,27 +220,45 @@ let video;
 
 createVideoElement();
 
-function createVideoElement() {
-  if (video) {
-    try {
-      console.log("Removing previous video element");
-      mediaSource.removeSourceBuffer(sourceBuffer);
-      sourceBuffer = null;
-      mediaSource.endOfStream();
-      mediaSource = null;
-      videoContainer.removeChild(video);
-    } catch (e) {
-      console.error("Error removing previous video element:", e);
-    }
+function cleanVideoElement() {
+  if (!video) return;
+  try {
+    cleanMediaSource();
+    videoContainer.removeChild(video);
+    video = null;
+  } catch (e) {
+    console.error("Error removing previous video element:", e);
   }
+}
+
+function createVideoElement() {
+  cleanVideoElement();
+
   console.log("Creating video element");
   video = videoContainer.appendChild(document.createElement("video"));
+  video.muted = true;
+  video.autoplay = true;
   addVideoEvents();
   createMediaSource();
   setTimeout(() => video.play().catch(console.error), REFRESHRATE);
 }
 
+function cleanMediaSource() {
+  if (!mediaSource) return;
+  try {
+    if (mediaSource.readyState === "open") {
+      mediaSource.endOfStream();
+    }
+    cleanSourceBuffer();
+    mediaSource = null;
+  } catch (e) {
+    console.error("Error cleaning mediaSource:", e);
+  }
+}
+
 function createMediaSource() {
+  cleanMediaSource();
+
   console.log("Creating mediaSource");
   mediaSource = new MediaSource();
 
@@ -251,10 +269,22 @@ function createMediaSource() {
   mediaSource.addEventListener("sourceopen", createSourceBuffer);
 }
 
+function cleanSourceBuffer() {
+  if (!sourceBuffer) return;
+  try {
+    sourceBuffer.abort();
+    sourceBuffer = null;
+  } catch (e) {
+    console.error("Error removing previous sourceBuffer:", e);
+  }
+}
+
 function createSourceBuffer() {
+  cleanSourceBuffer();
+
   console.log("Creating sourceBuffer with mimeType:", mimeType);
   sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-  sourceBuffer.mode = "segments";
+  sourceBuffer.mode = "sequence";
   // * when the previous blob has been appended, append a new one
   sourceBuffer.addEventListener("updateend", () =>
     setTimeout(appendToSourceBuffer, REFRESHRATE)
@@ -295,31 +325,7 @@ function moveToTimestamp(timestamp) {
   if (timestamp < startTimestamp) timestamp = startTimestamp;
 
   getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
-    // i = id;
-    // createVideoElement();
-    // setTimeout(appendToSourceBuffer, REFRESHRATE);
-
-    // ! the real problem: Blobs are not indipendent, I cannot load any blob
-    console.log("creating new video element");
-    const video = videoContainer.appendChild(document.createElement("video"));
-    const mediaSource = new MediaSource();
-    const url = URL.createObjectURL(mediaSource);
-    video.src = url;
-
-    console.log(blob);
-
-    // * when mediaSource is ready, create the sourceBuffer
-    mediaSource.addEventListener("sourceopen", () => {
-      const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-      sourceBuffer.mode = "segments";
-      blob.arrayBuffer().then((arrayBuffer) => {
-        console.log(arrayBuffer);
-        sourceBuffer.appendBuffer(arrayBuffer);
-      });
-      // * only works if it is the first blob
-      setTimeout(() => video.play().catch(console.error), 1000);
-      setTimeout(() => videoContainer.removeChild(video), 10000);
-    });
+    i = id;
   });
 }
 
@@ -358,14 +364,26 @@ function getWebcamStream() {
           : { videoBitsPerSecond: videoBitsPerSecond }
       );
 
-      mediaRecorder.start(REFRESHRATE);
+      /** @type {Blob[]} */
+      const blobs = [];
 
-      // * when data is aviable to the recorder, add it to the arrayOfBlob and then call appendToSourceBuffer to process it
       mediaRecorder.addEventListener("dataavailable", (e) => {
         const blob = e.data;
         // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
-        storeBlob(blob);
+        blobs.push(blob);
+        // * stopping and starting the mediaRecorder takes 10 ms, no worries
+        mediaRecorder.stop();
       });
+
+      mediaRecorder.addEventListener("stop", () => {
+        const blob = new Blob(blobs, { type: mimeType });
+        // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
+        storeBlob(blob);
+        blobs.length = 0;
+        mediaRecorder.start(REFRESHRATE);
+      });
+
+      mediaRecorder.start(REFRESHRATE);
 
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
@@ -516,12 +534,14 @@ const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
 /**
  * Transforms a number of seconds in a string of the format hh:mm:ss
  * @param {number} time in seconds
+ * @param {boolean} useMilliseconds if true, also shows milliseconds
  * @returns string as hh:mm:ss
  */
-function formatTime(time) {
+function formatTime(time, useMilliseconds = false) {
   const seconds = Math.floor(time % 60);
   const minutes = Math.floor(time / 60) % 60;
   const hours = Math.floor(time / 60 / 60);
+  const milliseconds = Math.floor((time % 1) * 1000);
 
   let returnString = "";
   if (hours !== 0) {
@@ -530,19 +550,25 @@ function formatTime(time) {
   returnString += `${leadingZeroFormatter.format(
     minutes
   )}:${leadingZeroFormatter.format(seconds)}`;
+
+  if (useMilliseconds) {
+    returnString += `.${leadingZeroFormatter.format(milliseconds)}`;
+  }
 
   return returnString;
 }
 /**
  * Transforms a timestamp in a string of the format hh:mm:ss
  * @param {number} timestamp in milliseconds from 01/01/1970
+ * @param {boolean} useMilliseconds if true, also shows milliseconds
  * @returns string as hh:mm:ss
  */
-function formatTimestamp(timestamp) {
+function formatTimestamp(timestamp, useMilliseconds = false) {
   const date = new Date(timestamp);
   const seconds = date.getSeconds();
   const minutes = date.getMinutes();
   const hours = date.getHours();
+  const milliseconds = date.getMilliseconds();
 
   let returnString = "";
   if (hours !== 0) {
@@ -551,6 +577,10 @@ function formatTimestamp(timestamp) {
   returnString += `${leadingZeroFormatter.format(
     minutes
   )}:${leadingZeroFormatter.format(seconds)}`;
+
+  if (useMilliseconds) {
+    returnString += `.${leadingZeroFormatter.format(milliseconds)}`;
+  }
 
   return returnString;
 }
