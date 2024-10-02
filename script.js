@@ -1,3 +1,5 @@
+/** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
+const MAXTIME = 0.5 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
@@ -26,6 +28,7 @@ const liveBtnElem = document.querySelector(".live-btn");
 const liveDotElem = document.querySelector(".live-dot");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
+const video = document.querySelector("video");
 const downloadBtn = document.querySelector(".download-btn");
 
 /** recording starting timestamp */
@@ -107,7 +110,7 @@ function storeBlob(blob, cb) {
     const id = e.target.result;
     console.log("Blob stored successfully:", {
       id,
-      timestamp: formatTimestamp(timestamp, true),
+      timestamp: formatTimestamp(timestamp),
     });
     if (!startTimestamp) startTimestamp = timestamp;
     lastTimestamp = timestamp;
@@ -137,7 +140,7 @@ function getBlobById(id, cb, errorCb) {
       const { blob, timestamp, id } = blobRecord;
       console.log("Blob retrieved:", {
         id,
-        timestamp: formatTimestamp(timestamp, true),
+        timestamp: formatTimestamp(timestamp),
       });
       cb(blob, timestamp);
     } else {
@@ -210,113 +213,93 @@ function getArrayOfBlobs(startId, endId, cb) {
 // * BLOB MANAGEMENT TO THE VIDEO TAG
 
 /** source for the video tag @type {MediaSource} */
-let mediaSource;
+const mediaSource = new MediaSource();
 /** buffer to hold various Blobs @type {SourceBuffer} */
 let sourceBuffer;
 /** index of the last blob added in the db. Autoindexing starts at 1 */
 let i = 1;
-/** @type {HTMLVideoElement} */
-let video;
 
-createVideoElement();
+const url = URL.createObjectURL(mediaSource);
+video.src = url;
 
-function cleanVideoElement() {
-  if (!video) return;
-  try {
-    cleanMediaSource();
-    videoContainer.removeChild(video);
-    video = null;
-  } catch (e) {
-    console.error("Error removing previous video element:", e);
-  }
+function sourceBufferOnUpdateEnd() {
+  setTimeout(appendToSourceBuffer, REFRESHRATE);
 }
 
-function createVideoElement() {
-  cleanVideoElement();
-
-  console.log("Creating video element");
-  video = videoContainer.appendChild(document.createElement("video"));
-  video.muted = true;
-  video.autoplay = true;
-  addVideoEvents();
-  createMediaSource();
-  setTimeout(() => video.play().catch(console.error), REFRESHRATE);
-}
-
-function cleanMediaSource() {
-  if (!mediaSource) return;
-  try {
-    if (mediaSource.readyState === "open") {
-      mediaSource.endOfStream();
-    }
-    cleanSourceBuffer();
-    mediaSource = null;
-  } catch (e) {
-    console.error("Error cleaning mediaSource:", e);
-  }
-}
-
-function createMediaSource() {
-  cleanMediaSource();
-
-  console.log("Creating mediaSource");
-  mediaSource = new MediaSource();
-
-  const url = URL.createObjectURL(mediaSource);
-  video.src = url;
-
-  // * when mediaSource is ready, create the sourceBuffer
-  mediaSource.addEventListener("sourceopen", createSourceBuffer);
-}
-
-function cleanSourceBuffer() {
-  if (!sourceBuffer) return;
-  try {
-    sourceBuffer.abort();
-    sourceBuffer = null;
-  } catch (e) {
-    console.error("Error removing previous sourceBuffer:", e);
-  }
-}
-
-function createSourceBuffer() {
-  cleanSourceBuffer();
-
-  console.log("Creating sourceBuffer with mimeType:", mimeType);
+// * when mediaSource is ready, create the sourceBuffer
+mediaSource.addEventListener("sourceopen", () => {
   sourceBuffer = mediaSource.addSourceBuffer(mimeType);
   sourceBuffer.mode = "sequence";
   // * when the previous blob has been appended, append a new one
-  sourceBuffer.addEventListener("updateend", () =>
-    setTimeout(appendToSourceBuffer, REFRESHRATE)
-  );
+  sourceBuffer.addEventListener("updateend", sourceBufferOnUpdateEnd);
   sourceBuffer.addEventListener("error", (e) => {
     console.error("Error with sourceBuffer:", e);
   });
+});
+
+function clearSourceBufferLength() {
+  return;
+  try {
+    // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
+    if (
+      video.buffered.length &&
+      video.buffered.end(0) - video.buffered.start(0) > MAXTIME
+    ) {
+      console.log(`REACHED MAXTIME: ${MAXTIME}`);
+
+      // * sourcebuffer.remove calls updateend when finished, if we dont do this sourceBufferOnUpdateEnd gets called a lot of times
+      sourceBuffer.removeEventListener("updateend", sourceBufferOnUpdateEnd);
+
+      sourceBuffer.remove(
+        video.buffered.start(0),
+        (video.buffered.start(0) + video.buffered.end(0)) / 2
+      );
+
+      sourceBuffer.addEventListener(
+        "updateend",
+        () => {
+          sourceBuffer.addEventListener("updateend", sourceBufferOnUpdateEnd);
+        },
+        { once: true }
+      );
+    }
+  } catch (e) {
+    console.error("Error whie clearing sourcebuffer lenght:", e);
+  }
+}
+
+function checkSourceBufferAviability() {
+  if (!mediaSource) return false;
+  if (mediaSource.readyState !== "open") return false;
+  if (!sourceBuffer) return false;
+  if (sourceBuffer.updating) return false;
+  return true;
 }
 
 /** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
-  if (!mediaSource) return;
-  if (mediaSource.readyState !== "open") return;
-  if (!sourceBuffer) return;
-  if (sourceBuffer.updating) return;
+  if (!checkSourceBufferAviability()) return;
+
+  const retry = () => setTimeout(appendToSourceBuffer, REFRESHRATE);
 
   getBlobById(
     i,
     (blob, timestamp) => {
-      i++;
+      clearSourceBufferLength();
       blob
         .arrayBuffer()
         .then((arrayBuffer) => {
+          if (!checkSourceBufferAviability()) return retry();
           sourceBuffer.appendBuffer(arrayBuffer);
+          i++;
           currentTimestamp = timestamp;
-          updateTotalTime();
+          updateTotalTimeOnVideo();
         })
         .catch((e) =>
           console.error("Error appending blob to sourceBuffer:", e)
         );
     },
-    () => setTimeout(appendToSourceBuffer, REFRESHRATE)
+    retry
   );
 }
 
@@ -384,7 +367,6 @@ function getWebcamStream() {
       });
 
       mediaRecorder.start(REFRESHRATE);
-
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
     .catch((err) => {
@@ -405,12 +387,12 @@ const keyMap = {
   f: () => toggleFullScreenMode(),
   t: () => toggleTheaterMode(),
   m: () => toggleMute(),
-  arrowleft: () => skip(-5),
-  j: () => skip(-10),
-  ",": () => skip(-0.1),
-  arrowright: () => skip(5),
-  l: () => skip(10),
-  ".": () => skip(0.1),
+  arrowleft: () => skipInTimestamp(-5),
+  j: () => skipInTimestamp(-10),
+  ",": () => skipInVideoBuffered(-0.1),
+  arrowright: () => skipInTimestamp(5),
+  l: () => skipInTimestamp(10),
+  ".": () => skipInVideoBuffered(0.1),
   p: () => changePlaybackSpeed(),
   backspace: () => returnLive(),
 };
@@ -448,67 +430,59 @@ document.addEventListener("fullscreenchange", () => {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * PLAY / PAUSE
 
-function addVideoEvents() {
-  video.addEventListener("click", togglePlay);
-  playPauseBtn.addEventListener("click", togglePlay);
-
-  video.addEventListener("play", () => {
-    videoContainer.classList.remove("paused");
-  });
-
-  video.addEventListener("pause", () => {
-    videoContainer.classList.add("paused");
-  });
-
-  muteBtn.addEventListener("click", toggleMute);
-  volumeSlider.addEventListener("input", (e) => {
-    video.volume = e.target.value;
-    video.muted = e.target.value === 0;
-  });
-
-  video.addEventListener("volumechange", () => {
-    volumeSlider.value = video.volume;
-    let volumeLevel;
-    if (video.muted || video.volume === 0) {
-      volumeSlider.value = 0;
-      volumeLevel = "muted";
-    } else if (video.volume >= 0.5) {
-      volumeLevel = "high";
-    } else {
-      volumeLevel = "low";
-    }
-
-    videoContainer.dataset.volumeLevel = volumeLevel;
-  });
-
-  video.addEventListener("timeupdate", () => {
-    // logVideoSituation();
-    const newCurrentTime = getCurrentTime();
-    const newTotalTime = getVideoDuration();
-    currentTimeElem.textContent = formatTimestamp(currentTimestamp);
-
-    const percent = newCurrentTime / newTotalTime;
-    timelineContainer.style.setProperty("--progress-position", percent);
-
-    const liveDotColor = percent > 0.95 ? "red" : "#bbb";
-    liveDotElem.style.setProperty("background-color", liveDotColor);
-  });
-}
+video.addEventListener("click", togglePlay);
+playPauseBtn.addEventListener("click", togglePlay);
 
 function togglePlay() {
-  if (!video.paused) {
-    video.pause();
-  } else {
+  if (video.paused) {
     video.play().catch(console.error);
+  } else {
+    video.pause();
   }
 }
+
+video.addEventListener("play", () => {
+  // this generates an error when starting the app, but it is fine afterward
+  try {
+    if (video.currentTime < video.buffered.start(0)) {
+      returnLive();
+    }
+  } catch (e) {}
+
+  videoContainer.classList.remove("paused");
+});
+
+video.addEventListener("pause", () => {
+  videoContainer.classList.add("paused");
+});
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * VOLUME
 
+muteBtn.addEventListener("click", toggleMute);
+volumeSlider.addEventListener("input", (e) => {
+  video.volume = e.target.value;
+  video.muted = e.target.value === 0;
+});
+
 function toggleMute() {
   video.muted = !video.muted;
 }
+
+video.addEventListener("volumechange", () => {
+  volumeSlider.value = video.volume;
+  let volumeLevel;
+  if (video.muted || video.volume === 0) {
+    volumeSlider.value = 0;
+    volumeLevel = "muted";
+  } else if (video.volume >= 0.5) {
+    volumeLevel = "high";
+  } else {
+    volumeLevel = "low";
+  }
+
+  videoContainer.dataset.volumeLevel = volumeLevel;
+});
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * DURATION
@@ -522,11 +496,34 @@ function getCurrentTime() {
 }
 
 /** called when a new buffer is added */
-function updateTotalTime() {
+function updateTotalTimeOnVideo() {
   const startString = formatTimestamp(startTimestamp);
   const lastString = formatTimestamp(lastTimestamp);
-  totalTimeElem.textContent = `${startString} - ${lastString}`;
+  totalTimeElem.textContent = `${startString} - ${lastString} (${formatTime(
+    video.buffered.start(0)
+  )} - ${formatTime(video.buffered.end(0))}) [${formatTime(
+    video.buffered.end(0) - video.buffered.start(0)
+  )}]`;
 }
+
+function updateCurrentTime() {
+  const currentString = formatTimestamp(currentTimestamp);
+  currentTimeElem.textContent = `${currentString} (${formatTime(
+    video.currentTime
+  )})`;
+}
+
+video.addEventListener("timeupdate", () => {
+  updateCurrentTime();
+  const newCurrentTime = getCurrentTime();
+  const newTotalTime = getVideoDuration();
+
+  const percent = newCurrentTime / newTotalTime;
+  timelineContainer.style.setProperty("--progress-position", percent);
+
+  const liveDotColor = percent > 0.95 ? "red" : "#bbb";
+  liveDotElem.style.setProperty("background-color", liveDotColor);
+});
 
 const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
@@ -534,14 +531,12 @@ const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
 /**
  * Transforms a number of seconds in a string of the format hh:mm:ss
  * @param {number} time in seconds
- * @param {boolean} useMilliseconds if true, also shows milliseconds
  * @returns string as hh:mm:ss
  */
-function formatTime(time, useMilliseconds = false) {
+function formatTime(time) {
   const seconds = Math.floor(time % 60);
   const minutes = Math.floor(time / 60) % 60;
   const hours = Math.floor(time / 60 / 60);
-  const milliseconds = Math.floor((time % 1) * 1000);
 
   let returnString = "";
   if (hours !== 0) {
@@ -550,25 +545,19 @@ function formatTime(time, useMilliseconds = false) {
   returnString += `${leadingZeroFormatter.format(
     minutes
   )}:${leadingZeroFormatter.format(seconds)}`;
-
-  if (useMilliseconds) {
-    returnString += `.${leadingZeroFormatter.format(milliseconds)}`;
-  }
 
   return returnString;
 }
 /**
  * Transforms a timestamp in a string of the format hh:mm:ss
  * @param {number} timestamp in milliseconds from 01/01/1970
- * @param {boolean} useMilliseconds if true, also shows milliseconds
  * @returns string as hh:mm:ss
  */
-function formatTimestamp(timestamp, useMilliseconds = false) {
+function formatTimestamp(timestamp) {
   const date = new Date(timestamp);
   const seconds = date.getSeconds();
   const minutes = date.getMinutes();
   const hours = date.getHours();
-  const milliseconds = date.getMilliseconds();
 
   let returnString = "";
   if (hours !== 0) {
@@ -578,14 +567,14 @@ function formatTimestamp(timestamp, useMilliseconds = false) {
     minutes
   )}:${leadingZeroFormatter.format(seconds)}`;
 
-  if (useMilliseconds) {
-    returnString += `.${leadingZeroFormatter.format(milliseconds)}`;
-  }
-
   return returnString;
 }
 
-function skip(duration) {
+function skipInVideoBuffered(duration) {
+  video.currentTime += duration;
+}
+
+function skipInTimestamp(duration) {
   moveToTimestamp(currentTimestamp + duration * 1000);
 }
 
@@ -617,7 +606,7 @@ document.addEventListener("mousemove", (e) => {
 });
 
 let isScrubbing = false;
-let wasPaused = video?.paused ?? true;
+let wasPaused = video.paused;
 function toggleScrubbling(e) {
   const percent = getVideoTimelinePercent(e);
   isScrubbing = (e.buttons & 1) === 1;
@@ -653,26 +642,6 @@ function getVideoTimelinePercent(e) {
 
   return percent;
 }
-
-// let last_initial_time = 0;
-// function logVideoSituation() {
-//   const currentTime = Math.floor(video.currentTime);
-//   const start = Math.floor(video.buffered.start(0));
-//   const end = Math.floor(video.buffered.end(0));
-//   const difference = Math.floor(getVideoDuration());
-
-//   // * when the mediaSource gets cut, log
-//   if (start === last_initial_time) return;
-//   last_initial_time = start;
-
-//   const obj = {
-//     currentTime: formatTime(currentTime),
-//     start: formatTime(start),
-//     end: formatTime(end),
-//     difference: formatTime(difference),
-//   };
-//   console.log(obj);
-// }
 
 // * save video
 downloadBtn.addEventListener("click", saveVideo);
