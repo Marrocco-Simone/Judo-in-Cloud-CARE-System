@@ -9,151 +9,408 @@
     <script src="script.js" defer></script>
   </head>
   <body>
-    <!-- TODO should always be theater and muted? -->
-    <div class="video-container paused theater" data-volume-level="muted">
-      <div class="video-controls-container">
-        <div class="timeline-container">
-          <div class="timeline">
-            <div class="thumb-indicator"></div>
-          </div>
-        </div>
-        <div class="controls">
-          <!-- TODO move svg in another place? -->
-          <button class="play-pause-btn">
-            <svg class="play-icon" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-            </svg>
-            <svg class="pause-icon" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
-            </svg>
-          </button>
+    <div class="bg-white overflow-x-hidden">
+      <!-- ! HEADER -->
+      <header
+        class="bg-[#0B5E76] w-full h-[10vh] flex justify-between items-center px-10"
+      >
+        <a href="https:www.judoincloud.com" class="h-full">
+          <svg
+            version="1.1"
+            id="Layer_1"
+            xmlns="http://www.w3.org/2000/svg"
+            x="0px"
+            y="0px"
+            viewBox="0 0 841.89 595.28"
+            class="h-full duration-75 ease-in-out hover:scale-[220%] cursor-pointer scale-[200%] pl-10 portrait:pl-5"
+          >
+            <g>
+              <g>
+                <path
+                  class="fill-white"
+                  d="M339.13,286.5v30.32c0,1.28-0.07,2.45-0.2,3.54c-0.14,1.08-0.36,2.01-0.67,2.78 c-0.5,1.24-1.19,2.37-2.06,3.39c-0.87,1.02-1.88,1.89-3.04,2.61c-1.16,0.72-2.44,1.28-3.86,1.68c-1.41,0.4-2.89,0.61-4.44,0.61 c-4.68,0-8.48-2.14-11.42-6.43l7.42-7.59c0.19,1.31,0.62,2.36,1.27,3.13c0.66,0.78,1.47,1.16,2.44,1.16 c2.12,0,3.19-1.68,3.19-5.05V286.5H339.13z"
+                />
+                <path
+                  class="fill-white"
+                  d="M359.71,286.5v23.77c0,1.27,0.05,2.58,0.14,3.91c0.1,1.33,0.39,2.54,0.87,3.62c0.48,1.08,1.25,1.96,2.29,2.64 c1.04,0.68,2.51,1.02,4.41,1.02c1.89,0,3.35-0.34,4.38-1.02c1.02-0.67,1.79-1.55,2.29-2.64c0.5-1.08,0.8-2.29,0.9-3.62 c0.1-1.33,0.15-2.64,0.15-3.91V286.5h11.3v25.33c0,6.8-1.56,11.77-4.67,14.9c-3.11,3.13-7.89,4.69-14.35,4.69 c-6.45,0-11.25-1.57-14.38-4.69c-3.13-3.13-4.69-8.1-4.69-14.9V286.5H359.71z"
+                />
+                <path
+                  class="fill-white"
+                  d="M395.59,286.5h16.81c2.98,0,5.77,0.6,8.38,1.8c2.61,1.2,4.89,2.79,6.84,4.78c1.95,1.99,3.49,4.31,4.61,6.96 c1.12,2.65,1.68,5.42,1.68,8.32c0,2.86-0.55,5.61-1.65,8.26s-2.63,4.98-4.58,6.99c-1.95,2.01-4.23,3.61-6.84,4.81 c-2.61,1.2-5.42,1.8-8.44,1.8h-16.81V286.5z M406.96,320.58h2.61c1.97,0,3.73-0.31,5.28-0.93c1.55-0.62,2.85-1.47,3.91-2.55 s1.87-2.37,2.44-3.86c0.56-1.49,0.84-3.12,0.84-4.9c0-1.74-0.29-3.36-0.87-4.87c-0.58-1.51-1.4-2.8-2.46-3.88 c-1.06-1.08-2.37-1.93-3.91-2.55c-1.55-0.62-3.29-0.93-5.22-0.93h-2.61V320.58z"
+                />
+                <path
+                  class="fill-white"
+                  d="M439.19,308.35c0-3.25,0.6-6.27,1.8-9.07c1.2-2.8,2.86-5.25,4.99-7.33c2.13-2.09,4.67-3.72,7.62-4.9 c2.96-1.18,6.21-1.77,9.77-1.77c3.52,0,6.76,0.59,9.74,1.77c2.97,1.18,5.54,2.81,7.68,4.9c2.14,2.09,3.82,4.53,5.01,7.33 c1.2,2.8,1.8,5.83,1.8,9.07s-0.6,6.27-1.8,9.07c-1.2,2.8-2.87,5.25-5.01,7.33s-4.71,3.72-7.68,4.9c-2.98,1.18-6.22,1.77-9.74,1.77 c-3.56,0-6.81-0.59-9.77-1.77c-2.96-1.18-5.5-2.81-7.62-4.9c-2.12-2.09-3.79-4.53-4.99-7.33 C439.79,314.62,439.19,311.6,439.19,308.35z M451.07,308.35c0,1.74,0.33,3.34,0.99,4.81c0.66,1.47,1.55,2.74,2.67,3.82 c1.12,1.08,2.42,1.92,3.91,2.52c1.49,0.6,3.06,0.9,4.72,0.9c1.66,0,3.24-0.3,4.72-0.9c1.49-0.6,2.8-1.44,3.94-2.52 c1.14-1.08,2.04-2.36,2.7-3.82c0.66-1.47,0.99-3.07,0.99-4.81c0-1.74-0.33-3.34-0.99-4.81c-0.66-1.47-1.56-2.74-2.7-3.83 c-1.14-1.08-2.46-1.92-3.94-2.52c-1.49-0.6-3.06-0.9-4.72-0.9c-1.66,0-3.24,0.3-4.72,0.9c-1.49,0.6-2.79,1.44-3.91,2.52 c-1.12,1.08-2.01,2.36-2.67,3.83C451.4,305.01,451.07,306.61,451.07,308.35z"
+                />
+                <path
+                  class="fill-white"
+                  d="M525.86,286.5v43.71H514.5V286.5H525.86z"
+                />
+                <path
+                  class="fill-white"
+                  d="M535.02,330.21V286.5h11.36l20.99,26.72V286.5h11.31v43.71h-11.31l-20.99-26.72v26.72H535.02z"
+                />
+                <path
+                  class="fill-white"
+                  d="M639.02,301.11c-2.63-3.21-5.87-4.81-9.74-4.81c-1.7,0-3.28,0.31-4.73,0.93c-1.45,0.62-2.7,1.46-3.74,2.52 c-1.04,1.06-1.87,2.33-2.46,3.8c-0.6,1.47-0.9,3.05-0.9,4.75c0,1.74,0.3,3.34,0.9,4.81c0.6,1.47,1.43,2.74,2.49,3.83 c1.06,1.08,2.31,1.93,3.74,2.55c1.43,0.62,2.98,0.93,4.64,0.93c3.63,0,6.9-1.55,9.8-4.64v13.45l-1.16,0.4 c-1.74,0.62-3.36,1.07-4.87,1.36c-1.51,0.29-3,0.44-4.46,0.44c-3.01,0-5.9-0.57-8.67-1.71c-2.76-1.14-5.2-2.74-7.3-4.81 c-2.11-2.07-3.8-4.52-5.07-7.36c-1.27-2.84-1.91-5.94-1.91-9.3s0.63-6.44,1.88-9.25c1.26-2.8,2.94-5.22,5.04-7.25 s4.55-3.61,7.33-4.75c2.78-1.14,5.7-1.71,8.75-1.71c1.74,0,3.45,0.18,5.13,0.55c1.68,0.37,3.45,0.94,5.3,1.71V301.11z"
+                />
+                <path
+                  class="fill-white"
+                  d="M657.57,286.5v34.09h13.62v9.62h-24.99V286.5H657.57z"
+                />
+                <path
+                  class="fill-white"
+                  d="M674.21,308.35c0-3.25,0.6-6.27,1.8-9.07c1.2-2.8,2.86-5.25,4.99-7.33c2.13-2.09,4.67-3.72,7.62-4.9 c2.96-1.18,6.21-1.77,9.77-1.77c3.52,0,6.76,0.59,9.74,1.77c2.97,1.18,5.54,2.81,7.68,4.9c2.14,2.09,3.82,4.53,5.01,7.33 c1.2,2.8,1.8,5.83,1.8,9.07s-0.6,6.27-1.8,9.07c-1.2,2.8-2.87,5.25-5.01,7.33s-4.71,3.72-7.68,4.9c-2.98,1.18-6.22,1.77-9.74,1.77 c-3.56,0-6.81-0.59-9.77-1.77c-2.96-1.18-5.5-2.81-7.62-4.9c-2.12-2.09-3.79-4.53-4.99-7.33 C674.81,314.62,674.21,311.6,674.21,308.35z M686.09,308.35c0,1.74,0.33,3.34,0.99,4.81c0.66,1.47,1.55,2.74,2.67,3.82 c1.12,1.08,2.42,1.92,3.91,2.52c1.49,0.6,3.06,0.9,4.72,0.9c1.66,0,3.24-0.3,4.72-0.9c1.49-0.6,2.8-1.44,3.94-2.52 c1.14-1.08,2.04-2.36,2.7-3.82c0.66-1.47,0.99-3.07,0.99-4.81c0-1.74-0.33-3.34-0.99-4.81c-0.66-1.47-1.56-2.74-2.7-3.83 c-1.14-1.08-2.46-1.92-3.94-2.52c-1.49-0.6-3.06-0.9-4.72-0.9c-1.66,0-3.24,0.3-4.72,0.9c-1.49,0.6-2.79,1.44-3.91,2.52 c-1.12,1.08-2.01,2.36-2.67,3.83C686.42,305.01,686.09,306.61,686.09,308.35z"
+                />
+                <path
+                  class="fill-white"
+                  d="M741.17,286.5v23.77c0,1.27,0.05,2.58,0.14,3.91c0.1,1.33,0.39,2.54,0.87,3.62c0.48,1.08,1.25,1.96,2.29,2.64 c1.04,0.68,2.51,1.02,4.41,1.02c1.89,0,3.35-0.34,4.38-1.02c1.02-0.67,1.79-1.55,2.29-2.64c0.5-1.08,0.8-2.29,0.9-3.62 c0.1-1.33,0.15-2.64,0.15-3.91V286.5h11.3v25.33c0,6.8-1.56,11.77-4.67,14.9c-3.11,3.13-7.89,4.69-14.35,4.69 c-6.45,0-11.25-1.57-14.38-4.69c-3.13-3.13-4.69-8.1-4.69-14.9V286.5H741.17z"
+                />
+                <path
+                  class="fill-white"
+                  d="M777.05,286.5h16.81c2.98,0,5.77,0.6,8.38,1.8c2.61,1.2,4.89,2.79,6.84,4.78c1.95,1.99,3.49,4.31,4.61,6.96 c1.12,2.65,1.68,5.42,1.68,8.32c0,2.86-0.56,5.61-1.66,8.26c-1.1,2.65-2.63,4.98-4.58,6.99c-1.95,2.01-4.23,3.61-6.84,4.81 c-2.61,1.2-5.42,1.8-8.44,1.8h-16.81V286.5z M788.41,320.58h2.61c1.97,0,3.73-0.31,5.28-0.93c1.55-0.62,2.85-1.47,3.91-2.55 s1.87-2.37,2.44-3.86c0.56-1.49,0.84-3.12,0.84-4.9c0-1.74-0.29-3.36-0.87-4.87c-0.58-1.51-1.4-2.8-2.46-3.88 c-1.06-1.08-2.37-1.93-3.91-2.55c-1.55-0.62-3.29-0.93-5.22-0.93h-2.61V320.58z"
+                />
+              </g>
+              <g>
+                <g>
+                  <path
+                    class="fill-white"
+                    d="M287.75,310.09c0.61,1.96,1.08,3.99,1.43,6.05C288.82,314.09,288.35,312.07,287.75,310.09z"
+                  />
+                </g>
+                <g>
+                  <path
+                    class="fill-white"
+                    d="M130.91,373.63H88.39c6.52-8.11,13.01-16.25,19.52-24.39c0.96-1.2,1.41-2.53,1.29-4.07 c-0.19-2.68-0.38-5.37-0.57-8.05c-0.03-0.55-0.06-1.1-0.11-1.83c0.28,0.21,0.4,0.27,0.48,0.36c4.52,4.43,9.04,8.87,13.53,13.31 c0.25,0.25,0.45,0.6,0.57,0.95C125.73,357.81,128.34,365.71,130.91,373.63z"
+                  />
+                </g>
+                <g>
+                  <path
+                    class="fill-white"
+                    d="M204.37,275.73c9-5.41,18.01-10.82,27.03-16.2c0.37-0.22,0.75-0.4,1.13-0.53 c-8.02-13.12-22.24-21.84-38.46-21.84c-10.25,0-19.71,3.49-27.31,9.36c-8.22-14.85-23.78-24.87-41.62-24.87 c-26.4,0-47.8,21.94-47.8,49c0,1.71,0.08,3.41,0.25,5.07c-1.08-0.07-2.17-0.12-3.28-0.12c-26.4,0-47.8,21.94-47.8,49 c0,27.06,21.4,49.01,47.8,49.01h2.37c-0.17-1.42,0.23-2.95,1.18-4.32c2.95-4.24,5.76-8.58,8.62-12.89 c2.24-3.37,4.45-6.76,6.7-10.12c0.42-0.62,0.51-1.16,0.3-1.89c-1.86-6.49-3.69-13.01-5.49-19.52c-1.04-3.73-0.57-7.29,1.41-10.61 c5.39-9.03,10.79-18.04,16.21-27.03c4.02-6.67,12.08-8.68,18.82-4.81c11.33,6.49,22.74,12.85,34,19.44 c3.46,2.02,6.58,4.58,9.82,6.94c5.41,3.94,10.8,7.92,16.2,11.89c0.24,0.18,0.49,0.34,0.8,0.54c3.29-3.38,6.56-6.75,9.87-10.15 c-0.09-0.06-0.37-0.24-0.65-0.4c-5.45-2.91-10.9-5.85-16.39-8.7c-2.14-1.11-3.31-2.7-3.7-5.11c-1.71-10.64-3.52-21.27-5.28-31.89 c-0.47-2.88,1.3-5.56,4.06-6.21c2.84-0.67,5.58,0.91,6.47,3.75c2.58,8.2,5.17,16.4,7.72,24.61c0.22,0.7,0.59,1.12,1.27,1.45 c5.16,2.44,10.3,4.93,15.44,7.41c0.42,0.2,0.85,0.4,1.44,0.67c-0.05-0.4-0.05-0.65-0.12-0.89c-1.17-4.57-2.33-9.15-3.52-13.72 C201.2,279.47,202.08,277.11,204.37,275.73z M133.63,275.03c-7.49-0.04-13.53-6.13-13.53-13.62c0.01-7.49,6.09-13.55,13.58-13.55 c7.53,0,13.62,6.11,13.6,13.66C147.25,268.97,141.09,275.07,133.63,275.03z"
+                  />
+                </g>
+                <g>
+                  <path
+                    class="fill-white"
+                    d="M289.86,322.92c-0.01-0.27-0.02-0.54-0.03-0.8c-0.01-0.24-0.02-0.49-0.04-0.74 c-0.04-0.7-0.11-1.42-0.18-2.11c-0.12-1.06-0.25-2.1-0.43-3.13c-0.18-1.03-0.39-2.05-0.62-3.06c-0.24-1.01-0.51-2.01-0.81-2.99 c0-0.01-0.01-0.03-0.01-0.05c-6.05-19.95-24.2-34.43-45.65-34.43c-1.1,0-2.21,0.04-3.3,0.13c-0.4-2.37-0.97-4.69-1.71-6.91 c-0.04,0.04-0.09,0.07-0.15,0.11c-1.75,1.16-3.36,2.54-5,3.87c-4.52,3.66-9.01,7.34-13.54,10.99c-0.58,0.45-0.62,0.79-0.3,1.43 c3.12,6.38,6.22,12.77,9.31,19.16c2.58,5.35,1.57,11.43-2.63,15.62c-7.21,7.23-14.41,14.45-21.64,21.65 c-5.6,5.57-14.32,5.24-19.78-0.46c-3.41-3.55-7.17-6.78-10.78-10.14c-6.31-5.88-12.64-11.78-18.97-17.64 c-0.55-0.5-1.16-0.97-1.81-1.31c-7.13-3.81-14.28-7.62-21.42-11.41c-0.26-0.15-0.55-0.25-0.89-0.42c-2,3.33-3.97,6.62-5.95,9.92 c-1.68,2.79-3.33,5.61-5.03,8.39c-0.41,0.66-0.46,1.1,0.05,1.78c5.6,7.32,11.18,14.66,16.69,22.04c0.62,0.83,1,1.93,1.21,2.97 c1.82,8.83,3.56,17.66,5.33,26.49c0.13,0.61,0.16,1.2,0.11,1.77h100.22c26.4,0,47.8-21.95,47.8-49.01 C289.9,324.05,289.88,323.48,289.86,322.92z M166.01,367.41c-7.46-0.13-13.42-6.32-13.3-13.84c0.12-7.45,6.34-13.45,13.83-13.33 c7.41,0.11,13.46,6.31,13.35,13.7C179.79,361.55,173.63,367.52,166.01,367.41z"
+                  />
+                </g>
+              </g>
+            </g>
+          </svg>
+        </a>
 
-          <div class="volume-container">
-            <button class="mute-btn">
-              <svg class="volume-high-icon" viewBox="0 0 24 24">
+        <input
+          id="homeheader-hamburger-input-checkbox"
+          type="checkbox"
+          class="peer hidden appearance-none m-0 p-0 outline-none pointer-events-none"
+          defaultChecked="{true}"
+        />
+        <label
+          id="homeheader-hamburger-menu"
+          htmlFor="homeheader-hamburger-input-checkbox"
+          class="ml-5 landscape:hidden text-7xl before:content-[&quot;✕&quot;] peer-checked:before:content-[&quot;☰&quot;] before:text-powderblue"
+        />
+
+        <div
+          class="h-1/2 flex gap-12 z-20 bg-[#0B5E76] portrait:peer-checked:hidden portrait:w-full portrait:absolute portrait:top-0 portrait:left-0 portrait:h-fit portrait:flex-col portrait:mt-[9vh] portrait:items-end portrait:p-5 portrait:gap-3 portrait:border-solid portrait:border-0 portrait:border-b-8 portrait:border-b-powderblue"
+        >
+          <a href="https:www.judoincloud.com/competitions">Competizioni</a>
+
+          <a href="https:www.judoincloud.com/learn">Prova JiC</a>
+
+          <a href="https:www.judoincloud.com/faq">Scopri in dettaglio</a>
+
+          <a href="https:www.judoincloud.com/login">Accedi</a>
+        </div>
+      </header>
+
+      <!-- ! VIDEO PLAYER -->
+      <div class="video-container paused theater" data-volume-level="muted">
+        <div class="video-controls-container">
+          <div class="timeline-container">
+            <div class="timeline">
+              <div class="thumb-indicator"></div>
+            </div>
+          </div>
+          <div class="controls">
+            <!-- TODO move svg in another place? -->
+            <button class="play-pause-btn">
+              <svg class="play-icon" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+              </svg>
+              <svg class="pause-icon" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+              </svg>
+            </button>
+
+            <div class="volume-container">
+              <button class="mute-btn">
+                <svg class="volume-high-icon" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
+                  />
+                </svg>
+                <svg class="volume-low-icon" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"
+                  />
+                </svg>
+                <svg class="volume-muted-icon" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"
+                  />
+                </svg>
+              </button>
+              <input
+                class="volume-slider"
+                type="range"
+                min="0"
+                max="1"
+                step="any"
+                value="0"
+              />
+            </div>
+
+            <div class="duration-container">
+              <div class="current-time">0:00</div>
+              /
+              <div class="total-time">0:00</div>
+              <div class="live-dot"></div>
+              <button class="live-btn">LIVE</button>
+            </div>
+
+            <button class="speed-btn wide-btn">1x</button>
+
+            <!-- TODO should always be theater -->
+            <button class="theater-btn">
+              <svg class="theater-off-icon" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
-                  d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
+                  d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"
                 />
               </svg>
-              <svg class="volume-low-icon" viewBox="0 0 24 24">
+              <svg class="theater-on-icon" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
-                  d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"
-                />
-              </svg>
-              <svg class="volume-muted-icon" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"
+                  d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"
                 />
               </svg>
             </button>
-            <input
-              class="volume-slider"
-              type="range"
-              min="0"
-              max="1"
-              step="any"
-              value="0"
-            />
+
+            <button class="full-screen-btn">
+              <svg class="fullscreen-off-icon" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+                />
+              </svg>
+              <svg class="fullscreen-on-icon" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"
+                />
+              </svg>
+            </button>
           </div>
-
-          <div class="duration-container">
-            <div class="current-time">0:00</div>
-            /
-            <div class="total-time">0:00</div>
-            <div class="live-dot"></div>
-            <button class="live-btn">LIVE</button>
-          </div>
-
-          <button class="speed-btn wide-btn">1x</button>
-
-          <!-- TODO should always be theater -->
-          <button class="theater-btn">
-            <svg class="theater-off-icon" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"
-              />
-            </svg>
-            <svg class="theater-on-icon" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"
-              />
-            </svg>
-          </button>
-
-          <button class="full-screen-btn">
-            <svg class="fullscreen-off-icon" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
-              />
-            </svg>
-            <svg class="fullscreen-on-icon" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"
-              />
-            </svg>
-          </button>
         </div>
+        <video muted></video>
       </div>
-      <video muted></video>
+
+      <!-- <button class="download-btn">Download</button> -->
+
+      <!-- ! BUTTONS -->
+      <table>
+        <tr>
+          <th>Tasto</th>
+          <th>Azione</th>
+        </tr>
+
+        <tr>
+          <td>Barra spaziatrice / K</td>
+          <td>Pausa / Riparti</td>
+        </tr>
+        <tr>
+          <td>F</td>
+          <td>Schermo intero</td>
+        </tr>
+        <tr>
+          <td>T</td>
+          <td>Modalita' teatro</td>
+        </tr>
+        <tr>
+          <td>M</td>
+          <td>Muta video</td>
+        </tr>
+        <tr>
+          <td>Frecce destra / sinistra</td>
+          <td>Avanti / indietro 5 secondi</td>
+        </tr>
+        <tr>
+          <td>J / L</td>
+          <td>Avanti / indietro 10 secondi</td>
+        </tr>
+        <tr>
+          <td>Punto / Virgola</td>
+          <td>Avanti / indietro 1 frame</td>
+        </tr>
+        <tr>
+          <td>P</td>
+          <td>Rallenta video / Torna normale</td>
+        </tr>
+        <tr>
+          <td>Backspace (freccia lunga a sinistra)</td>
+          <td>Torna live</td>
+        </tr>
+      </table>
+
+      <!-- ! FOOTER -->
+      <footer
+        class="bg-[#0B5E76] text-powderblue flex flex-col h-auto pt-10 pb-10 pl-20 portrait:pl-5"
+      >
+        <h3 class="text-4xl portrait:text-2xl m-0">Judo in Cloud</h3>
+        <h4 class="text-2xl portrait:text-lg m-0 font-normal">
+          Un servizio fatto su misura per te!
+        </h4>
+        <address class="flex portrait:grid portrait:grid-cols-2 gap-3">
+          <div
+            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
+          >
+            <h4>Contatti</h4>
+            <a
+              href="mailto:info@judoincloud.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >info@judoincloud.com</a
+            ><a
+              href="https://github.com/Marrocco-Simone"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Marrocco Simone</a
+            ><a
+              href="mailto:simone@judoincloud.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >simone@judoincloud.com</a
+            ><a
+              href="https://github.com/ecstt"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Casotti Elia</a
+            ><a
+              href="mailto:elia@judoincloud.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >elia@judoincloud.com</a
+            >
+          </div>
+          <div
+            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
+          >
+            <h4>In collaborazione con</h4>
+            <a
+              href="https://www.judolavis.it"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Judo Lavis</a
+            ><a
+              href="https://www.fijlkam.it/trento"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Comitato FIJLKAM Trentino</a
+            ><a
+              href="https://stefanomichelon.it/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Stefano Michelon, Designer</a
+            >
+          </div>
+          <div
+            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
+          >
+            <h4>Si ringraziano</h4>
+            <a
+              href="https://github.com/rayz1065"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Girardi Alessandro</a
+            ><a
+              href="https://github.com/simonevazzana"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Vazzana Simone</a
+            ><a
+              href="https://github.com/leonardoporcelli"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Porcelli Leonardo</a
+            >
+          </div>
+          <div
+            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
+          >
+            <h4>FAQ</h4>
+            <a
+              href="/faq/vantaggi"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Vantaggi</a
+            ><a
+              href="/faq/iniziare"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Iniziare</a
+            ><a
+              href="/faq/allenatore"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Per gli allenatori</a
+            ><a
+              href="/faq/gdpr"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Informativa Privacy</a
+            >
+          </div>
+          <div
+            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
+          >
+            <h4>Social</h4>
+            <a
+              href="https://www.facebook.com/people/Judo-in-Cloud/61555481962924/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Facebook</a
+            ><a
+              href="https://www.instagram.com/judoincloud/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-powderblue"
+              >Instagram</a
+            >
+          </div>
+        </address>
+      </footer>
     </div>
-
-    <!-- <br /> -->
-    <!-- <br /> -->
-
-    <!-- <button class="download-btn">Download</button> -->
-
-    <br />
-    <br />
-
-    <table>
-      <tr>
-        <th>Tasto</th>
-        <th>Azione</th>
-      </tr>
-
-      <tr>
-        <td>Barra spaziatrice / K</td>
-        <td>Pausa / Riparti</td>
-      </tr>
-      <tr>
-        <td>F</td>
-        <td>Schermo intero</td>
-      </tr>
-      <tr>
-        <td>T</td>
-        <td>Modalita' teatro</td>
-      </tr>
-      <tr>
-        <td>M</td>
-        <td>Muta video</td>
-      </tr>
-      <tr>
-        <td>Frecce destra / sinistra</td>
-        <td>Avanti / indietro 5 secondi</td>
-      </tr>
-      <tr>
-        <td>J / L</td>
-        <td>Avanti / indietro 10 secondi</td>
-      </tr>
-      <tr>
-        <td>Punto / Virgola</td>
-        <td>Avanti / indietro 1 frame</td>
-      </tr>
-      <tr>
-        <td>P</td>
-        <td>Rallenta video / Torna normale</td>
-      </tr>
-      <tr>
-        <td>Backspace (freccia lunga a sinistra)</td>
-        <td>Torna live</td>
-      </tr>
-    </table>
   </body>
 </html>
