@@ -9,6 +9,8 @@ const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
 const DELAY_MULTIPLIER = 2;
 const useAudio = true;
+const logDatabaseOp = false;
+const showMoreVideoInfo = false;
 
 const mimeType = useAudio
   ? 'video/webm; codecs="vp8, opus"'
@@ -48,8 +50,6 @@ const dbName = "blobStoreDB";
 const dbVersion = 1;
 /** @type {IDBDatabase} */
 let db;
-
-const logDatabaseOp = true;
 
 // todo instead of deleting the db when starting, we can recover from the last saved?
 deleteDatabase(() => openDbConnection());
@@ -525,8 +525,6 @@ function getVideoDuration() {
 function getCurrentTime() {
   return (currentTimestamp - startTimestamp) / 1000;
 }
-
-const showMoreVideoInfo = true;
 
 /** called when a new buffer is added */
 function updateTotalTimeOnVideo() {
