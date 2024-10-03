@@ -10,9 +10,7 @@ const REFRESHRATE = 1 * 1000;
 const DELAY_MULTIPLIER = 2;
 const useAudio = true;
 
-const mimeType = useAudio
-  ? 'video/webm; codecs="vp8, opus"'
-  : 'video/webm; codecs="vp8"';
+let mimeType; // = 'video/webm; codecs="vp8, opus"' // ! not okay since it changes on the OS and browser
 
 const millionFormatter = new Intl.NumberFormat(undefined, {
   notation: "scientific",
@@ -235,9 +233,8 @@ function waitBeforeNextAppendToSourceBuffer() {
   setTimeout(appendToSourceBuffer, REFRESHRATE);
 }
 
-// * when mediaSource is ready, create the sourceBuffer
-mediaSource.addEventListener("sourceopen", () => {
-  sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+function createSourceBuffer(thisMimeType) {
+  sourceBuffer = mediaSource.addSourceBuffer(thisMimeType);
   sourceBuffer.mode = "sequence";
   // * when the previous blob has been appended, append a new one
   sourceBuffer.addEventListener(
@@ -247,6 +244,12 @@ mediaSource.addEventListener("sourceopen", () => {
   sourceBuffer.addEventListener("error", (e) => {
     console.error("Error with sourceBuffer:", e);
   });
+}
+
+let isMediaSourceOpen = false;
+// * when mediaSource is ready, create the sourceBuffer
+mediaSource.addEventListener("sourceopen", () => {
+  isMediaSourceOpen = true;
 });
 
 function clearSourceBufferLength() {
@@ -391,7 +394,12 @@ function getWebcamStream() {
 
       mediaRecorder.addEventListener("stop", () => {
         if (blobs.length) {
-          const blob = new Blob(blobs, { type: blobs[0].type });
+          if (isMediaSourceOpen && !sourceBuffer) {
+            mimeType = blobs[0].type;
+            console.log("set mimeType:", mimeType);
+            createSourceBuffer(mimeType);
+          }
+          const blob = new Blob(blobs, { type: mimeType });
           // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
           storeBlob(blob);
           blobs.length = 0;
