@@ -7,7 +7,7 @@ const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
-const DELAY_MULTIPLIER = 1;
+const DELAY_MULTIPLIER = 2;
 const useAudio = true;
 
 const mimeType = useAudio
@@ -31,7 +31,6 @@ const liveDotElem = document.querySelector(".live-dot");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
-const downloadBtn = document.querySelector(".download-btn");
 
 /** recording starting timestamp */
 let startTimestamp = 0;
@@ -522,25 +521,23 @@ function getCurrentTime() {
   return (currentTimestamp - startTimestamp) / 1000;
 }
 
-const showMoreVideoInfo = true;
+const showMoreVideoInfo = false;
 
 /** called when a new buffer is added */
 function updateTotalTimeOnVideo() {
   const startString = formatTimestamp(startTimestamp);
   const lastString = formatTimestamp(lastTimestamp);
-  if (!showMoreVideoInfo) {
-    totalTimeElem.textContent = lastString;
-  } else {
-    let s = `${startString} - ${lastString}`;
 
+  let s = `${startString} - ${lastString}`;
+
+  if (showMoreVideoInfo) {
     if (video.buffered.length) {
       s += ` (${formatTime(video.buffered.start(0))} - ${formatTime(
         video.buffered.end(0)
       )}) [${formatTime(video.buffered.end(0) - video.buffered.start(0))}]`;
     }
-
-    totalTimeElem.textContent = s;
   }
+  totalTimeElem.textContent = s;
 }
 
 function updateCurrentTime() {
@@ -700,21 +697,22 @@ function getVideoTimelinePercent(e) {
 }
 
 // * save video
-downloadBtn.addEventListener("click", saveVideo);
+// const downloadBtn = document.querySelector(".download-btn");
+// downloadBtn.addEventListener("click", saveVideo);
 
-function saveVideo() {
-  getArrayOfBlobs(0, i, (arrayOfBlobs) => {
-    const blob = new Blob(arrayOfBlobs, { type: mimeType });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    a.download = "recorded-video.webm";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }, 100);
-  });
-}
+// function saveVideo() {
+//   getArrayOfBlobs(i - MAXTIME, i + MAXTIME, (arrayOfBlobs) => {
+//     const blob = new Blob(arrayOfBlobs, { type: mimeType });
+//     const url = window.URL.createObjectURL(blob);
+//     const a = document.createElement("a");
+//     a.style.display = "none";
+//     a.href = url;
+//     a.download = "recorded-video.webm";
+//     document.body.appendChild(a);
+//     a.click();
+//     setTimeout(() => {
+//       document.body.removeChild(a);
+//       window.URL.revokeObjectURL(url);
+//     }, 100);
+//   });
+// }
