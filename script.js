@@ -10,7 +10,9 @@ const REFRESHRATE = 1 * 1000;
 const DELAY_MULTIPLIER = 2;
 const useAudio = true;
 
-let mimeType; // = 'video/webm; codecs="vp8, opus"' // ! not okay since it changes on the OS and browser
+const mimeType = useAudio
+  ? 'video/webm; codecs="vp8, opus"'
+  : 'video/webm; codecs="vp8"';
 
 const millionFormatter = new Intl.NumberFormat(undefined, {
   notation: "scientific",
@@ -233,8 +235,9 @@ function waitBeforeNextAppendToSourceBuffer() {
   setTimeout(appendToSourceBuffer, REFRESHRATE);
 }
 
-function createSourceBuffer(thisMimeType) {
-  sourceBuffer = mediaSource.addSourceBuffer(thisMimeType);
+// * when mediaSource is ready, create the sourceBuffer
+mediaSource.addEventListener("sourceopen", () => {
+  sourceBuffer = mediaSource.addSourceBuffer(mimeType);
   sourceBuffer.mode = "sequence";
   // * when the previous blob has been appended, append a new one
   sourceBuffer.addEventListener(
@@ -244,12 +247,6 @@ function createSourceBuffer(thisMimeType) {
   sourceBuffer.addEventListener("error", (e) => {
     console.error("Error with sourceBuffer:", e);
   });
-}
-
-let isMediaSourceOpen = false;
-// * when mediaSource is ready, create the sourceBuffer
-mediaSource.addEventListener("sourceopen", () => {
-  isMediaSourceOpen = true;
 });
 
 function clearSourceBufferLength() {
@@ -370,16 +367,16 @@ function getWebcamStream() {
         mediaStream.addTrack(audioTrack);
       }
 
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        throw new Error(`Mime type "${mimeType}" is not supported.`);
+      }
+
       /** saves the webcam stream to various Blobs */
-      const mediaRecorder = new MediaRecorder(
-        mediaStream,
-        useAudio
-          ? {
-              audioBitsPerSecond: 128000,
-              videoBitsPerSecond: videoBitsPerSecond,
-            }
-          : { videoBitsPerSecond: videoBitsPerSecond }
-      );
+      const mediaRecorder = new MediaRecorder(mediaStream, {
+        audioBitsPerSecond: useAudio ? 128000 : undefined,
+        videoBitsPerSecond: videoBitsPerSecond,
+        mimeType: mimeType,
+      });
 
       /** @type {Blob[]} */
       const blobs = [];
@@ -393,17 +390,10 @@ function getWebcamStream() {
       });
 
       mediaRecorder.addEventListener("stop", () => {
-        if (blobs.length) {
-          if (isMediaSourceOpen && !sourceBuffer) {
-            mimeType = blobs[0].type;
-            console.log("set mimeType:", mimeType);
-            createSourceBuffer(mimeType);
-          }
-          const blob = new Blob(blobs, { type: mimeType });
-          // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
-          storeBlob(blob);
-          blobs.length = 0;
-        }
+        const blob = new Blob(blobs, { type: mimeType });
+        // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
+        storeBlob(blob);
+        blobs.length = 0;
         mediaRecorder.start(REFRESHRATE);
       });
 
@@ -413,7 +403,7 @@ function getWebcamStream() {
     .catch((err) => {
       console.log(err);
       alert(
-        "Assicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system"
+        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).`
       );
     });
 }
@@ -717,7 +707,7 @@ function getVideoTimelinePercent(e) {
 
 // function saveVideo() {
 //   getArrayOfBlobs(i - MAXTIME, i + MAXTIME, (arrayOfBlobs) => {
-//     const blob = new Blob(arrayOfBlobs, { type: arrayOfBlobs[0].type });
+//     const blob = new Blob(arrayOfBlobs, { type: mimeType });
 //     const url = window.URL.createObjectURL(blob);
 //     const a = document.createElement("a");
 //     a.style.display = "none";
