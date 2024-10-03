@@ -390,10 +390,12 @@ function getWebcamStream() {
       });
 
       mediaRecorder.addEventListener("stop", () => {
-        const blob = new Blob(blobs, { type: mimeType });
-        // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
-        storeBlob(blob);
-        blobs.length = 0;
+        if (blobs.length) {
+          const blob = new Blob(blobs, { type: blobs[0].type });
+          // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
+          storeBlob(blob);
+          blobs.length = 0;
+        }
         mediaRecorder.start(REFRESHRATE);
       });
 
@@ -707,7 +709,7 @@ function getVideoTimelinePercent(e) {
 
 // function saveVideo() {
 //   getArrayOfBlobs(i - MAXTIME, i + MAXTIME, (arrayOfBlobs) => {
-//     const blob = new Blob(arrayOfBlobs, { type: mimeType });
+//     const blob = new Blob(arrayOfBlobs, { type: arrayOfBlobs[0].type });
 //     const url = window.URL.createObjectURL(blob);
 //     const a = document.createElement("a");
 //     a.style.display = "none";
