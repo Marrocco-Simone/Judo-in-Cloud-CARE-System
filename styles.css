@@ -27,6 +27,14 @@ video {
   width: 100%;
 }
 
+.video-logo {
+  position: absolute;
+  top: 0%;
+  right: 10%;
+  width: 7.5%;
+  opacity: 0.5;
+}
+
 /* view mode */
 .video-container.theater,
 .video-container.full-screen {
