@@ -3,10 +3,6 @@
 
 /* * Simple classes from tailwind */
 
-.h-full {
-  height: 100%;
-}
-
 .fill-white {
   fill: #fff;
 }
@@ -31,6 +27,10 @@
   width: 100%;
   background: #0b5e76;
   height: 10vh;
+}
+
+.jic-svg-link {
+  height: 100%;
 }
 
 .jic-svg {
@@ -70,6 +70,31 @@
 .jic-top-link:hover {
   background-color: #ffffff;
   color: #0b5e76;
+}
+
+@media (orientation: portrait) {
+  /* ! try and error for a good composition */
+  .jic-header {
+    flex-direction: column;
+    padding-left: 0;
+    padding-right: 0;
+    height: 18vh;
+  }
+
+  .jic-svg-link {
+    height: 60%;
+  }
+
+  .jic-svg {
+    width: 100%;
+    scale: 100%;
+    padding-left: 0;
+    height: auto;
+    transform: translate(0, -30%);
+  }
+  .jic-svg:hover {
+    scale: 110%;
+  }
 }
 
 .jic-main {
@@ -119,4 +144,31 @@
   font-size: 1.25rem;
   line-height: 1.75rem;
   margin-right: 3.5rem;
+}
+
+@media (orientation: portrait) {
+  .jic-footer {
+    padding-left: 1.25rem;
+  }
+
+  .jic-footer-title {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+
+  .jic-footer-subtitle {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .jic-footer-adress {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jic-footer-adress-column {
+    gap: 0.25rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
 }
