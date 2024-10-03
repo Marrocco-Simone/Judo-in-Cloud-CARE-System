@@ -6,14 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Judo in Cloud - Care System</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="jic_styles.css" />
     <script src="script.js" defer></script>
   </head>
   <body>
-    <div class="bg-white overflow-x-hidden">
+    <div class="jic-wrapper">
       <!-- ! HEADER -->
-      <header
-        class="bg-[#0B5E76] w-full h-[10vh] flex justify-between items-center px-10"
-      >
+      <header class="jic-header">
         <a href="https:www.judoincloud.com" class="h-full">
           <svg
             version="1.1"
@@ -22,7 +21,7 @@
             x="0px"
             y="0px"
             viewBox="0 0 841.89 595.28"
-            class="h-full duration-75 ease-in-out hover:scale-[220%] cursor-pointer scale-[200%] pl-10 portrait:pl-5"
+            class="jic-svg"
           >
             <g>
               <g>
@@ -101,28 +100,10 @@
           </svg>
         </a>
 
-        <input
-          id="homeheader-hamburger-input-checkbox"
-          type="checkbox"
-          class="peer hidden appearance-none m-0 p-0 outline-none pointer-events-none"
-          defaultChecked="{true}"
-        />
-        <label
-          id="homeheader-hamburger-menu"
-          htmlFor="homeheader-hamburger-input-checkbox"
-          class="ml-5 landscape:hidden text-7xl before:content-[&quot;✕&quot;] peer-checked:before:content-[&quot;☰&quot;] before:text-powderblue"
-        />
-
-        <div
-          class="h-1/2 flex gap-12 z-20 bg-[#0B5E76] portrait:peer-checked:hidden portrait:w-full portrait:absolute portrait:top-0 portrait:left-0 portrait:h-fit portrait:flex-col portrait:mt-[9vh] portrait:items-end portrait:p-5 portrait:gap-3 portrait:border-solid portrait:border-0 portrait:border-b-8 portrait:border-b-powderblue"
-        >
-          <a href="https:www.judoincloud.com/competitions">Competizioni</a>
-
-          <a href="https:www.judoincloud.com/learn">Prova JiC</a>
-
-          <a href="https:www.judoincloud.com/faq">Scopri in dettaglio</a>
-
-          <a href="https:www.judoincloud.com/login">Accedi</a>
+        <div class="jic-top-links">
+          <a href="https:www.judoincloud.com/faq">
+            <button class="jic-top-link">Scopri di più</button>
+          </a>
         </div>
       </header>
 
@@ -269,17 +250,11 @@
       </table>
 
       <!-- ! FOOTER -->
-      <footer
-        class="bg-[#0B5E76] text-powderblue flex flex-col h-auto pt-10 pb-10 pl-20 portrait:pl-5"
-      >
-        <h3 class="text-4xl portrait:text-2xl m-0">Judo in Cloud</h3>
-        <h4 class="text-2xl portrait:text-lg m-0 font-normal">
-          Un servizio fatto su misura per te!
-        </h4>
-        <address class="flex portrait:grid portrait:grid-cols-2 gap-3">
-          <div
-            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
-          >
+      <footer class="jic-footer">
+        <h3 class="jic-footer-title">Judo in Cloud</h3>
+        <h4 class="jic-footer-subtitle">Un servizio fatto su misura per te!</h4>
+        <address class="jic-footer-adress">
+          <div class="jic-footer-adress-column">
             <h4>Contatti</h4>
             <a
               href="mailto:info@judoincloud.com"
@@ -313,9 +288,7 @@
               >elia@judoincloud.com</a
             >
           </div>
-          <div
-            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
-          >
+          <div class="jic-footer-adress-column">
             <h4>In collaborazione con</h4>
             <a
               href="https://www.judolavis.it"
@@ -337,9 +310,7 @@
               >Stefano Michelon, Designer</a
             >
           </div>
-          <div
-            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
-          >
+          <div class="jic-footer-adress-column">
             <h4>Si ringraziano</h4>
             <a
               href="https://github.com/rayz1065"
@@ -361,9 +332,7 @@
               >Porcelli Leonardo</a
             >
           </div>
-          <div
-            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
-          >
+          <div class="jic-footer-adress-column">
             <h4>FAQ</h4>
             <a
               href="/faq/vantaggi"
@@ -391,9 +360,7 @@
               >Informativa Privacy</a
             >
           </div>
-          <div
-            class="flex flex-col gap-2 portrait:gap-1 mr-14 text-xl portrait:text-base"
-          >
+          <div class="jic-footer-adress-column">
             <h4>Social</h4>
             <a
               href="https://www.facebook.com/people/Judo-in-Cloud/61555481962924/"

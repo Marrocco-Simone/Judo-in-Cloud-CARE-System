@@ -1,10 +1,14 @@
 /* general stuff */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
 }
 
 /* top container */
@@ -54,7 +58,7 @@ video {
   content: "";
   position: absolute;
   bottom: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, .75), transparent);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
   width: 100%;
   /* TODO maybe reduce this, to avoid blocking the judo action */
   aspect-ratio: 6 / 1;
@@ -63,15 +67,17 @@ video {
 }
 
 .video-container:hover .video-controls-container,
-.video-container:focus-within .video-controls-container
-.video-container.paused .video-controls-container {
+.video-container:focus-within
+  .video-controls-container
+  .video-container.paused
+  .video-controls-container {
   opacity: 1;
 }
 
 .video-controls-container .controls {
   display: flex;
-  gap: .5rem;
-  padding: .25rem;
+  gap: 0.5rem;
+  padding: 0.25rem;
   align-items: center;
 }
 
@@ -84,7 +90,7 @@ video {
   width: 30px;
   font-size: 1.1rem;
   cursor: pointer;
-  opacity: .85;
+  opacity: 0.85;
   transition: opacity 150ms ease-in-out;
 }
 
@@ -157,7 +163,7 @@ video {
 .duration-container {
   display: flex;
   align-items: center;
-  gap: .25rem;
+  gap: 0.25rem;
   flex-grow: 1;
 }
 
@@ -178,14 +184,14 @@ video {
 /* timeline */
 .timeline-container {
   height: 7px;
-  margin-inline: .5rem;
+  margin-inline: 0.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
 }
 
 .timeline {
-  background-color: rgba(100, 100, 100, .5);
+  background-color: rgba(100, 100, 100, 0.5);
   height: 3px;
   width: 100%;
   position: relative;
@@ -232,7 +238,7 @@ video {
   top: -1rem;
   transform: translate(-50%, -100%);
   left: calc(var(--preview-position) * 100%);
-  border-radius: .25rem;
+  border-radius: 0.25rem;
   border: 2px solid white;
   display: none;
 }
@@ -248,12 +254,12 @@ video {
   display: none;
 }
 
-.video-container.scrubbing .thumbnail-img{
+.video-container.scrubbing .thumbnail-img {
   display: block;
 }
 
 .video-container.scrubbing .preview-img,
-.timeline-container:hover .preview-img{
+.timeline-container:hover .preview-img {
   display: block;
 }
 
