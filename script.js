@@ -5,7 +5,7 @@ const MAXTIME = 3 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
-const REFRESHRATE = 10 * 1000;
+const REFRESHRATE = 30 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
 const DELAY_MULTIPLIER = 1;
 const useAudio = false;
@@ -466,11 +466,7 @@ playPauseBtn.addEventListener("click", togglePlay);
 
 function togglePlay() {
   if (video.paused) {
-    console.log("start play");
-    video
-      .play()
-      .then(() => console.log("playing"))
-      .catch(console.error);
+    video.play().catch(console.error);
   } else {
     video.pause();
   }
