@@ -1,11 +1,13 @@
+"use strict";
+
 /** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
-const MAXTIME = 0.5 * 60;
+const MAXTIME = 3 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
-const DELAY_MULTIPLIER = 3;
+const DELAY_MULTIPLIER = 1;
 const useAudio = true;
 
 const mimeType = useAudio
@@ -47,6 +49,8 @@ const dbName = "blobStoreDB";
 const dbVersion = 1;
 /** @type {IDBDatabase} */
 let db;
+
+const logDatabaseOp = false;
 
 // todo instead of deleting the db when starting, we can recover from the last saved?
 deleteDatabase(() => openDbConnection());
@@ -108,10 +112,12 @@ function storeBlob(blob, cb) {
   request.addEventListener("success", (e) => {
     /** @type {number} */
     const id = e.target.result;
-    console.log("Blob stored successfully:", {
-      id,
-      timestamp: formatTimestamp(timestamp),
-    });
+    if (logDatabaseOp) {
+      console.log("Blob stored successfully:", {
+        id,
+        timestamp: formatTimestamp(timestamp),
+      });
+    }
     if (!startTimestamp) startTimestamp = timestamp;
     lastTimestamp = timestamp;
     if (cb) cb();
@@ -138,13 +144,17 @@ function getBlobById(id, cb, errorCb) {
     const blobRecord = e.target.result;
     if (blobRecord) {
       const { blob, timestamp, id } = blobRecord;
-      console.log("Blob retrieved:", {
-        id,
-        timestamp: formatTimestamp(timestamp),
-      });
+      if (logDatabaseOp) {
+        console.log("Blob retrieved:", {
+          id,
+          timestamp: formatTimestamp(timestamp),
+        });
+      }
       cb(blob, timestamp);
     } else {
-      console.error(`Blob ${id} not found.`);
+      if (logDatabaseOp) {
+        console.error(`Blob ${id} not found.`);
+      }
       errorCb();
     }
   });
@@ -222,7 +232,7 @@ let i = 1;
 const url = URL.createObjectURL(mediaSource);
 video.src = url;
 
-function sourceBufferOnUpdateEnd() {
+function waitBeforeNextAppendToSourceBuffer() {
   setTimeout(appendToSourceBuffer, REFRESHRATE);
 }
 
@@ -231,24 +241,29 @@ mediaSource.addEventListener("sourceopen", () => {
   sourceBuffer = mediaSource.addSourceBuffer(mimeType);
   sourceBuffer.mode = "sequence";
   // * when the previous blob has been appended, append a new one
-  sourceBuffer.addEventListener("updateend", sourceBufferOnUpdateEnd);
+  sourceBuffer.addEventListener(
+    "updateend",
+    waitBeforeNextAppendToSourceBuffer
+  );
   sourceBuffer.addEventListener("error", (e) => {
     console.error("Error with sourceBuffer:", e);
   });
 });
 
 function clearSourceBufferLength() {
-  return;
   try {
     // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
     if (
       video.buffered.length &&
       video.buffered.end(0) - video.buffered.start(0) > MAXTIME
     ) {
-      console.log(`REACHED MAXTIME: ${MAXTIME}`);
+      console.log("Reached maximum video length in seconds:", MAXTIME);
 
-      // * sourcebuffer.remove calls updateend when finished, if we dont do this sourceBufferOnUpdateEnd gets called a lot of times
-      sourceBuffer.removeEventListener("updateend", sourceBufferOnUpdateEnd);
+      // * sourcebuffer.remove calls updateend when finished, if we dont do this waitBeforeNextAppendToSourceBuffer gets called a lot of times
+      sourceBuffer.removeEventListener(
+        "updateend",
+        waitBeforeNextAppendToSourceBuffer
+      );
 
       sourceBuffer.remove(
         video.buffered.start(0),
@@ -258,7 +273,10 @@ function clearSourceBufferLength() {
       sourceBuffer.addEventListener(
         "updateend",
         () => {
-          sourceBuffer.addEventListener("updateend", sourceBufferOnUpdateEnd);
+          sourceBuffer.addEventListener(
+            "updateend",
+            waitBeforeNextAppendToSourceBuffer
+          );
         },
         { once: true }
       );
@@ -279,8 +297,10 @@ function checkSourceBufferAviability() {
 /** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
   if (!checkSourceBufferAviability()) return;
-
-  const retry = () => setTimeout(appendToSourceBuffer, REFRESHRATE);
+  if (!checkVideoIsGoingOn()) {
+    waitBeforeNextAppendToSourceBuffer();
+    return;
+  }
 
   getBlobById(
     i,
@@ -289,7 +309,11 @@ function appendToSourceBuffer() {
       blob
         .arrayBuffer()
         .then((arrayBuffer) => {
-          if (!checkSourceBufferAviability()) return retry();
+          if (!checkSourceBufferAviability()) {
+            waitBeforeNextAppendToSourceBuffer();
+            return;
+          }
+
           sourceBuffer.appendBuffer(arrayBuffer);
           i++;
           currentTimestamp = timestamp;
@@ -299,7 +323,7 @@ function appendToSourceBuffer() {
           console.error("Error appending blob to sourceBuffer:", e)
         );
     },
-    retry
+    waitBeforeNextAppendToSourceBuffer
   );
 }
 
@@ -308,7 +332,10 @@ function moveToTimestamp(timestamp) {
   if (timestamp < startTimestamp) timestamp = startTimestamp;
 
   getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
+    // * next blob to load should be the one we found
     i = id;
+    // * return in the end of the video
+    video.currentTime = video.buffered.end(0);
   });
 }
 
@@ -495,22 +522,36 @@ function getCurrentTime() {
   return (currentTimestamp - startTimestamp) / 1000;
 }
 
+const showMoreVideoInfo = true;
+
 /** called when a new buffer is added */
 function updateTotalTimeOnVideo() {
   const startString = formatTimestamp(startTimestamp);
   const lastString = formatTimestamp(lastTimestamp);
-  totalTimeElem.textContent = `${startString} - ${lastString} (${formatTime(
-    video.buffered.start(0)
-  )} - ${formatTime(video.buffered.end(0))}) [${formatTime(
-    video.buffered.end(0) - video.buffered.start(0)
-  )}]`;
+  if (!showMoreVideoInfo) {
+    totalTimeElem.textContent = lastString;
+  } else {
+    let s = `${startString} - ${lastString}`;
+
+    if (video.buffered.length) {
+      s += ` (${formatTime(video.buffered.start(0))} - ${formatTime(
+        video.buffered.end(0)
+      )}) [${formatTime(video.buffered.end(0) - video.buffered.start(0))}]`;
+    }
+
+    totalTimeElem.textContent = s;
+  }
 }
 
 function updateCurrentTime() {
   const currentString = formatTimestamp(currentTimestamp);
-  currentTimeElem.textContent = `${currentString} (${formatTime(
-    video.currentTime
-  )})`;
+  let s = currentString;
+
+  if (showMoreVideoInfo) {
+    s += ` (${formatTime(video.currentTime)})`;
+  }
+
+  currentTimeElem.textContent = s;
 }
 
 video.addEventListener("timeupdate", () => {
@@ -524,6 +565,21 @@ video.addEventListener("timeupdate", () => {
   const liveDotColor = percent > 0.95 ? "red" : "#bbb";
   liveDotElem.style.setProperty("background-color", liveDotColor);
 });
+
+function checkVideoIsGoingOn() {
+  try {
+    // * we don't have the video yet
+    if (!video.buffered.length) return true;
+
+    return (
+      video.buffered.end(0) - video.currentTime < (REFRESHRATE / 1000) * 10
+    );
+  } catch (e) {
+    console.error("Error in checkVideoIsGoingOn:", e);
+    // * whatever error happens, ignore this function (see when it's used)
+    return true;
+  }
+}
 
 const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
