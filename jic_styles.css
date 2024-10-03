@@ -72,6 +72,17 @@
   color: #0b5e76;
 }
 
+.jic-main {
+  background-color: #0b5e76;
+  margin-block-start: 2.5rem;
+  margin-block-end: 2.5rem;
+  padding-block-start: 2.5rem;
+  padding-block-end: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
 .jic-footer {
   background-color: #0b5e76;
   color: powderblue;

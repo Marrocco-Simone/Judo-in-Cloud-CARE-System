@@ -277,3 +277,18 @@ video {
 .timeline-container:hover .timeline {
   height: 100%;
 }
+
+.instruction-container {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.instruction-table {
+  background-color: #ffffff;
+  color: #0b5e76;
+  border-radius: 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  padding: 1rem;
+  border-spacing: 2.5rem 0.25rem;
+}
