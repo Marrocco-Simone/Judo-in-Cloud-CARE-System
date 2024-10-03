@@ -278,9 +278,18 @@ video {
   height: 100%;
 }
 
+/* * INSTRUCTION CONTAINER */
+
 .instruction-container {
   display: flex;
   justify-content: space-evenly;
+}
+
+.instruction-text {
+  color: powderblue;
+  width: 50%;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
 }
 
 .instruction-table {
@@ -291,4 +300,19 @@ video {
   line-height: 1.75rem;
   padding: 1rem;
   border-spacing: 2.5rem 0.25rem;
+}
+
+@media (orientation: portrait) {
+  .instruction-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .instruction-text {
+    width: 95%;
+  }
+
+  .instruction-table {
+    border-spacing: 0.25rem;
+  }
 }
