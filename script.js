@@ -49,7 +49,7 @@ const dbVersion = 1;
 /** @type {IDBDatabase} */
 let db;
 
-const logDatabaseOp = false;
+const logDatabaseOp = true;
 
 // todo instead of deleting the db when starting, we can recover from the last saved?
 deleteDatabase(() => openDbConnection());
@@ -521,7 +521,7 @@ function getCurrentTime() {
   return (currentTimestamp - startTimestamp) / 1000;
 }
 
-const showMoreVideoInfo = false;
+const showMoreVideoInfo = true;
 
 /** called when a new buffer is added */
 function updateTotalTimeOnVideo() {
