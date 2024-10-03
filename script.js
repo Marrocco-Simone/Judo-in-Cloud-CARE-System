@@ -466,7 +466,11 @@ playPauseBtn.addEventListener("click", togglePlay);
 
 function togglePlay() {
   if (video.paused) {
-    video.play().catch(console.error);
+    console.log("start play");
+    video
+      .play()
+      .then(() => console.log("playing"))
+      .catch(console.error);
   } else {
     video.pause();
   }
