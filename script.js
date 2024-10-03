@@ -313,6 +313,11 @@ function appendToSourceBuffer() {
             return;
           }
 
+          if (blob.type !== mimeType) {
+            throw new Error(
+              `Blob type is not "${mimeType}" but "${blob.type}"`
+            );
+          }
           sourceBuffer.appendBuffer(arrayBuffer);
           i++;
           currentTimestamp = timestamp;
