@@ -5,10 +5,10 @@ const MAXTIME = 3 * 60;
 // const videoBitsPerSecond = 2500000 / 4;
 const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
-const REFRESHRATE = 30 * 1000;
+const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
-const DELAY_MULTIPLIER = 1;
-const useAudio = false;
+const DELAY_MULTIPLIER = 3;
+const useAudio = true;
 const logDatabaseOp = false;
 const showMoreVideoInfo = false;
 
