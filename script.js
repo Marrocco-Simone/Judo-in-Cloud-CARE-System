@@ -5,14 +5,18 @@ const urlParams = new URLSearchParams(queryString);
 
 /** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
 const MAXTIME = 3 * 60;
-const videoBitsPerSecond =
-  (urlParams.get("videoBitsPerSecond") ?? 0.5) * 1000 * 1000;
-// const videoBitsPerSecond = 2.5 * 1000 * 1000;
+const videoBitsPerSecond = Number(urlParams.get("videoBitsPerSecond"))
+  ? Number(urlParams.get("videoBitsPerSecond") * 1000)
+  : 5000 * 1000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
-const REFRESHRATE = (urlParams.get("REFRESHRATE") ?? 2) * 1000;
+const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
+  ? Number(urlParams.get("REFRESHRATE")) * 1000
+  : 2 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
-const DELAY_MULTIPLIER = 2;
-const useAudio = true;
+const DELAY_MULTIPLIER = Number(urlParams.get("DELAY_MULTIPLIER"))
+  ? Number(urlParams.get("DELAY_MULTIPLIER"))
+  : 2;
+const useAudio = urlParams.get("useAudio") === "false" ? false : true;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
@@ -20,6 +24,8 @@ const showMoreVideoInfo =
 console.log("params: ", {
   videoBitsPerSecond,
   REFRESHRATE,
+  DELAY_MULTIPLIER,
+  useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
 });
