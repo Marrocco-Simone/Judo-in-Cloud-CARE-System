@@ -1,6 +1,5 @@
 name: Electron App Build and Release
 
-# Trigger the workflow on any push to the main branch
 on:
   push:
     branches:
@@ -15,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest] # Target both Linux and Windows
+        os: [ubuntu-latest, windows-latest, macos-latest] # Target Linux, Windows, and Mac
 
     steps:
       - name: Checkout code
@@ -39,19 +38,23 @@ jobs:
         env:
           ELECTRON_SKIP_PREFLIGHT_CHECK: true
 
-      # Create a new GitHub Release
+      # Generate a release tag (based on the current date and time)
       - name: Generate Release Tag
         id: generate_tag
-        run: echo "v$(date +'%Y%m%d%H%M%S')" > tag.txt
+        run: |
+          TAG_NAME="v$(date +'%Y%m%d%H%M%S')"
+          echo "Generated tag: $TAG_NAME"
+          echo "tag=$TAG_NAME" >> $GITHUB_ENV
 
+      # Create a new GitHub Release using the generated tag
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.generate_tag.outputs.tag }} # Use the generated tag
-          release_name: "Release ${{ steps.generate_tag.outputs.tag }}"
+          tag_name: ${{ env.TAG_NAME }} # Use the generated tag
+          release_name: "Release ${{ env.TAG_NAME }}"
           draft: false
           prerelease: false
 
@@ -64,7 +67,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: "executable/out/make/*/*.deb" # Path to the Linux build artifacts inside 'executable'
-          asset_name: "myapp-linux.deb" # Name of the uploaded asset
+          asset_name: "jic-care-system-linux.deb" # Name of the uploaded asset
           asset_content_type: "application/octet-stream"
 
       # Upload Windows Release Assets
@@ -76,5 +79,17 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: "executable/out/make/*/*.exe" # Path to the Windows build artifacts inside 'executable'
-          asset_name: "myapp-windows.exe" # Name of the uploaded asset
+          asset_name: "jic-care-system-windows.exe" # Name of the uploaded asset
+          asset_content_type: "application/octet-stream"
+
+      # Upload macOS Release Assets
+      - name: Upload macOS Release Assets
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "executable/out/make/*/*.dmg" # Path to the macOS build artifacts inside 'executable'
+          asset_name: "jic-care-system-mac.dmg" # Name of the uploaded asset
           asset_content_type: "application/octet-stream"
