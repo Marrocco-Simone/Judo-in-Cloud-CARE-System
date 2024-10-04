@@ -205,6 +205,11 @@ video {
   position: relative;
 }
 
+.video-container.scrubbing .timeline,
+.timeline-container:hover .timeline {
+  height: 100%;
+}
+
 .timeline::before {
   content: "";
   position: absolute;
@@ -214,6 +219,11 @@ video {
   right: calc(100% - var(--preview-position) * 100%);
   background-color: rgb(150, 150, 150);
   display: none;
+}
+
+.video-container.scrubbing .timeline::before,
+.timeline-container:hover .timeline::before {
+  display: block;
 }
 
 .timeline::after {
@@ -226,6 +236,7 @@ video {
   background-color: red;
 }
 
+/* * Red dot */
 .timeline .thumb-indicator {
   --scale: 0;
   position: absolute;
@@ -239,7 +250,34 @@ video {
   aspect-ratio: 1 / 1;
 }
 
-.timeline .preview-img {
+.video-container.scrubbing .thumb-indicator,
+.timeline:hover .thumb-indicator {
+  --scale: 1;
+}
+
+/* * Timestamp indicator */
+.timeline .timestamp-indicator {
+  --scale: 0;
+  position: absolute;
+  transform: translateX(-50%) scale(var(--scale));
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  top: -3.5rem;
+  left: calc(var(--progress-position) * 100%);
+  border-radius: 0.5rem;
+  transition: transform 150ms ease-in-out;
+  background-color: darkslategray;
+  opacity: 0.75;
+  padding: 0.5rem;
+  margin: 0;
+}
+
+.video-container.scrubbing .timestamp-indicator,
+.timeline:hover .timestamp-indicator {
+  --scale: 1;
+}
+
+/* .timeline .preview-img {
   position: absolute;
   height: 80px;
   aspect-ratio: 16 / 9;
@@ -249,9 +287,14 @@ video {
   border-radius: 0.25rem;
   border: 2px solid white;
   display: none;
-}
+} */
 
-.thumbnail-img {
+/* .video-container.scrubbing .preview-img,
+.timeline-container:hover .preview-img {
+  display: block;
+} */
+
+/* .thumbnail-img {
   position: absolute;
   top: 0;
   left: 0;
@@ -264,27 +307,7 @@ video {
 
 .video-container.scrubbing .thumbnail-img {
   display: block;
-}
-
-.video-container.scrubbing .preview-img,
-.timeline-container:hover .preview-img {
-  display: block;
-}
-
-.video-container.scrubbing .timeline::before,
-.timeline-container:hover .timeline::before {
-  display: block;
-}
-
-.video-container.scrubbing .thumb-indicator,
-.timeline:hover .thumb-indicator {
-  --scale: 1;
-}
-
-.video-container.scrubbing .timeline,
-.timeline-container:hover .timeline {
-  height: 100%;
-}
+} */
 
 /* * INSTRUCTION CONTAINER */
 

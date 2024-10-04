@@ -4,7 +4,7 @@ const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 
 /** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
-const MAXTIME = 3 * 60;
+const MAXTIME = 1 * 60;
 const videoBitsPerSecond = Number(urlParams.get("videoBitsPerSecond"))
   ? Number(urlParams.get("videoBitsPerSecond") * 1000)
   : 500 * 1000;
@@ -113,6 +113,7 @@ const liveDotElem = document.querySelector(".live-dot");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
+const timestampIndicator = document.querySelector(".timestamp-indicator");
 
 /** recording starting timestamp */
 let startTimestamp = 0;
@@ -348,7 +349,7 @@ function clearSourceBufferLength() {
 
       sourceBuffer.remove(
         video.buffered.start(0),
-        (video.buffered.start(0) + video.buffered.end(0)) / 2
+        ((video.buffered.start(0) + video.buffered.end(0)) * 3) / 4
       );
 
       sourceBuffer.addEventListener(
@@ -643,6 +644,9 @@ video.addEventListener("timeupdate", () => {
 
   const percent = newCurrentTime / newTotalTime;
   timelineContainer.style.setProperty("--progress-position", percent);
+  const percentTimestamp =
+    (lastTimestamp - startTimestamp) * percent + startTimestamp;
+  timestampIndicator.textContent = formatTimestamp(percentTimestamp);
 
   const liveDotColor = percent > 0.95 ? "red" : "#bbb";
   liveDotElem.style.setProperty("background-color", liveDotColor);
@@ -769,6 +773,9 @@ function handleTimelineUpdate(e) {
   if (isScrubbing) {
     e.preventDefault();
     timelineContainer.style.setProperty("--progress-position", percent);
+    const percentTimestamp =
+      (lastTimestamp - startTimestamp) * percent + startTimestamp;
+    timestampIndicator.textContent = formatTimestamp(percentTimestamp);
   }
 
   timelineContainer.style.setProperty("--preview-position", percent);
