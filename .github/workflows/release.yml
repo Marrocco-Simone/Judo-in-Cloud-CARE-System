@@ -6,6 +6,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write # Allows the workflow to write to the repository (e.g., create releases)
+
 jobs:
   release:
     runs-on: ubuntu-latest # Use Ubuntu for building both Linux and Windows apps
