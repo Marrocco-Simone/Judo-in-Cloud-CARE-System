@@ -38,6 +38,10 @@ jobs:
         env:
           ELECTRON_SKIP_PREFLIGHT_CHECK: true
 
+      # Debugging step: List build directory contents
+      - name: List Build Directory
+        run: ls -R ./executable/out/make # List the contents of the 'make' output directory
+
       # Generate a release tag (based on the current date and time)
       - name: Generate Release Tag
         id: generate_tag
