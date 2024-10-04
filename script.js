@@ -2,15 +2,15 @@
 
 /** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
 const MAXTIME = 3 * 60;
-// const videoBitsPerSecond = 2500000 / 4;
-const videoBitsPerSecond = 2500000;
+const videoBitsPerSecond = 2500000 / 4;
+// const videoBitsPerSecond = 2500000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
 const DELAY_MULTIPLIER = 3;
 const useAudio = true;
-const logDatabaseOp = false;
-const showMoreVideoInfo = false;
+const logDatabaseOp = true;
+const showMoreVideoInfo = true;
 
 const mimeType = useAudio
   ? 'video/webm; codecs="vp8, opus"'
