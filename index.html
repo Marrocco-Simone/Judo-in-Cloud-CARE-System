@@ -391,7 +391,10 @@
 
         <form id="queryFormElement" class="query-form-element">
           <h3>Impostazioni registrazione</h3>
-          <button type="submit">Conferma</button>
+          <div class="query-form-buttons">
+            <button id="submitButton" type="submit">Conferma</button>
+            <button id="resetButton" type="button">Reset</button>
+          </div>
           <label>
             <p>Qualita video</p>
             <input id="videoBitsInput" type="number" min="0" step="500" />

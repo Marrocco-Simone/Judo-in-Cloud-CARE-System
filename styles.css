@@ -367,6 +367,13 @@ video {
   accent-color: #0b5e76;
 }
 
+.query-form-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+}
+
 .query-form-element button {
   background-color: #0b5e76;
   color: white;
@@ -375,8 +382,7 @@ video {
   padding: 0.5rem;
   font-size: 1.5rem;
   line-height: 2rem;
-  width: auto;
-  margin: auto;
+  width: 30%;
   cursor: pointer;
   transition: background-color 150ms, color 150ms, transform 150ms;
 }

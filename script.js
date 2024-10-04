@@ -87,6 +87,11 @@ const queryFormElement = document.getElementById("queryFormElement");
 queryFormElement.addEventListener("submit", setNewQueryParams);
 queryFormElement.addEventListener("keydown", (e) => e.stopPropagation());
 
+const resetButtonElement = document.getElementById("resetButton");
+resetButtonElement.addEventListener("click", () => {
+  window.location.search = "";
+});
+
 const mimeType = useAudio
   ? 'video/webm; codecs="vp8, opus"'
   : 'video/webm; codecs="vp8"';
