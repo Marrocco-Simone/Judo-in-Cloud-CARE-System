@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest] # Target Linux, Windows, and Mac
+        os: [ubuntu-latest, windows-latest, macos-latest] # Target Linux, Windows, and macOS
 
     steps:
       - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
         run: |
           TAG_NAME="v$(date +'%Y%m%d%H%M%S')"
           echo "Generated tag: $TAG_NAME"
-          echo "tag=$TAG_NAME" >> $GITHUB_ENV
+          echo "::set-output name=TAG::$TAG_NAME"
 
       # Create a new GitHub Release using the generated tag
       - name: Create Release
@@ -53,8 +53,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.TAG_NAME }} # Use the generated tag
-          release_name: "Release ${{ env.TAG_NAME }}"
+          tag_name: ${{ steps.generate_tag.outputs.TAG }} # Use the generated tag output
+          release_name: "Release ${{ steps.generate_tag.outputs.TAG }}"
           draft: false
           prerelease: false
 
