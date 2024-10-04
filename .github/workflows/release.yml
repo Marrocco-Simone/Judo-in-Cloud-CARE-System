@@ -1,0 +1,73 @@
+name: Electron App Build and Release
+
+# Trigger the workflow on any push to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest # Use Ubuntu for building both Linux and Windows apps
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest] # Target both Linux and Windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # Checkout the source code from the repository
+
+      # Setup Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x" # Specify the Node.js version
+
+      # Change directory to the Electron app folder (executable) and install dependencies
+      - name: Install dependencies
+        working-directory: ./executable # Move into the 'executable' folder
+        run: npm install
+
+      # Build the app using Electron Forge (inside the 'executable' folder)
+      - name: Run Electron Forge Make
+        working-directory: ./executable # Run the make command in the 'executable' folder
+        run: npm run make # This will trigger Electron Forge's make command
+        env:
+          ELECTRON_SKIP_PREFLIGHT_CHECK: true
+
+      # Create a new GitHub Release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.sha }} # Use the latest commit hash as the tag
+          release_name: "Release for commit ${{ github.sha }}"
+          draft: false
+          prerelease: false
+
+      # Upload Linux Release Assets
+      - name: Upload Linux Release Assets
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "executable/out/make/*/*.deb" # Path to the Linux build artifacts inside 'executable'
+          asset_name: "myapp-linux.deb" # Name of the uploaded asset
+          asset_content_type: "application/octet-stream"
+
+      # Upload Windows Release Assets
+      - name: Upload Windows Release Assets
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "executable/out/make/*/*.exe" # Path to the Windows build artifacts inside 'executable'
+          asset_name: "myapp-windows.exe" # Name of the uploaded asset
+          asset_content_type: "application/octet-stream"
