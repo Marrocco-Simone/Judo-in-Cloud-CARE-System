@@ -40,14 +40,18 @@ jobs:
           ELECTRON_SKIP_PREFLIGHT_CHECK: true
 
       # Create a new GitHub Release
+      - name: Generate Release Tag
+        id: generate_tag
+        run: echo "v$(date +'%Y%m%d%H%M%S')" > tag.txt
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.sha }} # Use the latest commit hash as the tag
-          release_name: "Release for commit ${{ github.sha }}"
+          tag_name: ${{ steps.generate_tag.outputs.tag }} # Use the generated tag
+          release_name: "Release ${{ steps.generate_tag.outputs.tag }}"
           draft: false
           prerelease: false
 
