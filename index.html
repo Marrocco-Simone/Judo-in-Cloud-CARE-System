@@ -388,6 +388,35 @@
             </tr>
           </table>
         </div>
+
+        <form id="queryFormElement" class="query-form-element">
+          <h3>Impostazioni registrazione</h3>
+          <button type="submit">Conferma</button>
+          <label>
+            <p>Qualita video</p>
+            <input id="videoBitsInput" type="number" min="0" step="500" />
+          </label>
+          <label>
+            <p>Refresh rate</p>
+            <input id="refreshRateInput" type="number" min="0" step="0.25" />
+          </label>
+          <label>
+            <p>Ritardo live</p>
+            <input id="delayMultiplierInput" type="number" min="0" step="1" />
+          </label>
+          <label>
+            <p>Usa audio</p>
+            <input id="useAudioInput" type="checkbox" />
+          </label>
+          <label>
+            <p>Log database operations</p>
+            <input id="logDatabaseOpInput" type="checkbox" />
+          </label>
+          <label>
+            <p>More video info</p>
+            <input id="showMoreVideoInfoInput" type="checkbox" />
+          </label>
+        </form>
       </main>
 
       <!-- ! FOOTER -->

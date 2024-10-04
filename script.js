@@ -7,7 +7,7 @@ const urlParams = new URLSearchParams(queryString);
 const MAXTIME = 3 * 60;
 const videoBitsPerSecond = Number(urlParams.get("videoBitsPerSecond"))
   ? Number(urlParams.get("videoBitsPerSecond") * 1000)
-  : 5000 * 1000;
+  : 500 * 1000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
   ? Number(urlParams.get("REFRESHRATE")) * 1000
@@ -29,6 +29,63 @@ console.log("params: ", {
   logDatabaseOp,
   showMoreVideoInfo,
 });
+
+/** @type {HTMLInputElement} */
+const videoBitsInput = document.getElementById("videoBitsInput");
+videoBitsInput.value = videoBitsPerSecond / 1000;
+
+/** @type {HTMLInputElement} */
+const refreshRateInput = document.getElementById("refreshRateInput");
+refreshRateInput.value = REFRESHRATE / 1000;
+
+/** @type {HTMLInputElement} */
+const delayMultiplierInput = document.getElementById("delayMultiplierInput");
+delayMultiplierInput.value = DELAY_MULTIPLIER;
+
+/** @type {HTMLInputElement} */
+const useAudioInput = document.getElementById("useAudioInput");
+useAudioInput.checked = useAudio;
+
+/** @type {HTMLInputElement} */
+const logDatabaseOpInput = document.getElementById("logDatabaseOpInput");
+logDatabaseOpInput.checked = logDatabaseOp;
+
+/** @type {HTMLInputElement} */
+const showMoreVideoInfoInput = document.getElementById(
+  "showMoreVideoInfoInput"
+);
+showMoreVideoInfoInput.checked = showMoreVideoInfo;
+
+/** @param {SubmitEvent} e */
+function setNewQueryParams(e) {
+  e.preventDefault();
+  const newParams = new URLSearchParams(window.location.search);
+
+  const videoBitsPerSecond = videoBitsInput.value;
+  newParams.set("videoBitsPerSecond", videoBitsPerSecond);
+
+  const refreshRate = refreshRateInput.value;
+  newParams.set("REFRESHRATE", refreshRate);
+
+  const delayMultiplier = delayMultiplierInput.value;
+  newParams.set("DELAY_MULTIPLIER", delayMultiplier);
+
+  const useAudio = useAudioInput.checked;
+  newParams.set("useAudio", useAudio);
+
+  const logDatabaseOp = logDatabaseOpInput.checked;
+  newParams.set("logDatabaseOp", logDatabaseOp);
+
+  const showMoreVideoInfo = showMoreVideoInfoInput.checked;
+  newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  window.location.search = newParams.toString();
+}
+
+/** @type {HTMLFormElement} */
+const queryFormElement = document.getElementById("queryFormElement");
+queryFormElement.addEventListener("submit", setNewQueryParams);
+queryFormElement.addEventListener("keydown", (e) => e.stopPropagation());
 
 const mimeType = useAudio
   ? 'video/webm; codecs="vp8, opus"'
