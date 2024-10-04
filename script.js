@@ -1,16 +1,28 @@
 "use strict";
 
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+
 /** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
 const MAXTIME = 3 * 60;
-const videoBitsPerSecond = 5 * 1000 * 1000;
+const videoBitsPerSecond =
+  (urlParams.get("videoBitsPerSecond") ?? 0.5) * 1000 * 1000;
 // const videoBitsPerSecond = 2.5 * 1000 * 1000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
-const REFRESHRATE = 2 * 1000;
+const REFRESHRATE = (urlParams.get("REFRESHRATE") ?? 2) * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
 const DELAY_MULTIPLIER = 2;
 const useAudio = true;
-const logDatabaseOp = true;
-const showMoreVideoInfo = true;
+const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
+const showMoreVideoInfo =
+  urlParams.get("showMoreVideoInfo") === "true" ? true : false;
+
+console.log("params: ", {
+  videoBitsPerSecond,
+  REFRESHRATE,
+  logDatabaseOp,
+  showMoreVideoInfo,
+});
 
 const mimeType = useAudio
   ? 'video/webm; codecs="vp8, opus"'
@@ -115,6 +127,7 @@ function storeBlob(blob, cb) {
       console.log("Blob stored successfully:", {
         id,
         timestamp: formatTimestamp(timestamp),
+        size: `${Math.floor(blob.size / 1000)} kb`,
       });
     }
     if (!startTimestamp) startTimestamp = timestamp;
@@ -147,6 +160,7 @@ function getBlobById(id, cb, errorCb) {
         console.log("Blob retrieved:", {
           id,
           timestamp: formatTimestamp(timestamp),
+          size: `${Math.floor(blob.size / 1000)} kb`,
         });
       }
       cb(blob, timestamp);
