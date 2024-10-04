@@ -70,7 +70,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "executable/out/make/*/*.deb" # Path to the Linux build artifacts inside 'executable'
+          asset_path: "executable/out/make/deb/x64/jic-care-system-executable_1.0.0_amd64.deb" # Path to the Linux build artifacts inside 'executable'
           asset_name: "jic-care-system-linux.deb" # Name of the uploaded asset
           asset_content_type: "application/octet-stream"
 
