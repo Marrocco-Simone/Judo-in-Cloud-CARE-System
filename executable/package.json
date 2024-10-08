@@ -10,22 +10,6 @@
   },
   "author": "Judo in Cloud",
   "license": "GPL-3.0-only",
-  "config": {
-    "forge": {
-      "publishers": [
-        {
-          "name": "@electron-forge/publisher-github",
-          "config": {
-            "repository": {
-              "owner": "Marrocco-Simone",
-              "name": "Judo-in-Cloud-CARE-System"
-            },
-            "draft": true
-          }
-        }
-      ]
-    }
-  },
   "devDependencies": {
     "@electron-forge/cli": "^7.5.0",
     "@electron-forge/maker-deb": "^7.5.0",
