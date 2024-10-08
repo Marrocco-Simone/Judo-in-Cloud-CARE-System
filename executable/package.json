@@ -4,7 +4,7 @@
   "description": "Judo in Cloud - CARE System",
   "main": "main.js",
   "scripts": {
-    "copyFiles": "cd .. && cp ./* ./executable || :",
+    "copyFiles": "cd .. && cp ./*.html ./*.js ./*.css ./executable",
     "cleanExecutable": "cd .. && find . -maxdepth 1 -type f -exec rm ./executable/{} \\;",
     "start": "npm run copyFiles && electron-forge start",
     "package": "npm run copyFiles && electron-forge package",
