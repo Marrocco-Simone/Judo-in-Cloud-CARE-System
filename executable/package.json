@@ -4,8 +4,8 @@
   "description": "Judo in Cloud - CARE System",
   "main": "main.js",
   "scripts": {
-    "copyFiles": "cross-env bash -c 'cd .. && find . -maxdepth 1 -type f -exec cp {} ./executable \\;'",
-    "cleanExecutable": "cross-env bash -c 'cd .. && find . -maxdepth 1 -type f -exec rm ./executable/{} \\;'",
+    "copyFiles": "cd .. && cp ./* ./executable || :",
+    "cleanExecutable": "cd .. && find . -maxdepth 1 -type f -exec rm ./executable/{} \\;",
     "start": "npm run copyFiles && electron-forge start",
     "package": "npm run copyFiles && electron-forge package",
     "make": "npm run copyFiles && electron-forge make",
@@ -23,12 +23,9 @@
     "@electron-forge/plugin-fuses": "^7.5.0",
     "@electron-forge/publisher-github": "^7.5.0",
     "@electron/fuses": "^1.8.0",
-    "cross-env": "^7.0.3",
-    "electron": "^32.1.2",
-    "shx": "^0.3.4"
+    "electron": "^32.1.2"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1",
-    "remove": "^0.1.5"
+    "electron-squirrel-startup": "^1.0.1"
   }
 }
