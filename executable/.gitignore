@@ -1,2 +1,9 @@
 node_modules
 out/
+
+*
+!.gitignore
+!main.js
+!package.json
+!package-lock.json
+!forge.config.js

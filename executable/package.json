@@ -4,10 +4,11 @@
   "description": "Judo in Cloud - CARE System",
   "main": "main.js",
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish"
+    "copyFiles": "cd .. && cp * ./executable",
+    "start": "npm copyFiles; electron-forge start",
+    "package": "npm copyFiles; electron-forge package",
+    "make": "npm copyFiles; electron-forge make",
+    "publish": "npm copyFiles; electron-forge publish"
   },
   "author": "Judo in Cloud",
   "license": "GPL-3.0-only",
