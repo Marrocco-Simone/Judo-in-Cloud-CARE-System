@@ -5,10 +5,10 @@
   "main": "main.js",
   "scripts": {
     "copyFiles": "cd .. && cp * ./executable",
-    "start": "npm copyFiles; electron-forge start",
-    "package": "npm copyFiles; electron-forge package",
-    "make": "npm copyFiles; electron-forge make",
-    "publish": "npm copyFiles; electron-forge publish"
+    "start": "npm run copyFiles; electron-forge start",
+    "package": "npm run copyFiles; electron-forge package",
+    "make": "npm run copyFiles; electron-forge make",
+    "publish": "npm run copyFiles; electron-forge publish"
   },
   "author": "Judo in Cloud",
   "license": "GPL-3.0-only",
