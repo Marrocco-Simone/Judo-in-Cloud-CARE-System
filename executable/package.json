@@ -1,15 +1,15 @@
 {
-  "name": "jic_care_system_executable",
+  "name": "judo-in-cloud-care-system",
   "version": "1.0.0",
-  "description": "Executable for the Judo in Cloud CARE System",
+  "description": "Judo in Cloud - CARE System",
   "main": "main.js",
-  "author": "Judo in Cloud",
-  "license": "GPL-3.0-only",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
+  "author": "Judo in Cloud",
+  "license": "GPL-3.0-only",
   "devDependencies": {
     "@electron-forge/cli": "^7.5.0",
     "@electron-forge/maker-deb": "^7.5.0",
@@ -18,26 +18,10 @@
     "@electron-forge/maker-zip": "^7.5.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
     "@electron-forge/plugin-fuses": "^7.5.0",
-    "@electron-forge/publisher-github": "^7.5.0",
     "@electron/fuses": "^1.8.0",
     "electron": "^32.1.2"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"
-  },
-  "config": {
-    "forge": {
-      "publishers": [
-        {
-          "name": "@electron-forge/publisher-github",
-          "config": {
-            "repository": {
-              "owner": "Judo in Cloud",
-              "name": "Judo in Cloud - CARE System"
-            }
-          }
-        }
-      ]
-    }
   }
 }
