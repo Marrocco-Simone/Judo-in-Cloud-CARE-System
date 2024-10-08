@@ -9,13 +9,18 @@ module.exports = {
     asar: true,
   },
   rebuildConfig: {},
-  PublisherGithub: {
-    repository: {
-      owner: "Marrocco-Simone",
-      name: "Judo-in-Cloud-CARE-System",
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: {
+          owner: "Marrocco-Simone",
+          name: "Judo-in-Cloud-CARE-System",
+        },
+        draft: true,
+      },
     },
-    draft: true,
-  },
+  ],
   makers: [
     {
       name: "@electron-forge/maker-squirrel",
