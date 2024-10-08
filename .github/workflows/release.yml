@@ -1,9 +1,9 @@
 name: Release
 
 on:
-  release:
-    types:
-      - created
+  push:
+    tags:
+      - "v*"
 
 jobs:
   publish_on_linux:
@@ -20,21 +20,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cd executable; npm run publish
 
-  # publish_on_mac:
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/setup-node@master
-  #       with:
-  #         node-version: 14
-  #     - name: move to folder
-  #       run: cd executable
-  #     - name: install dependencies
-  #       run: npm install
-  #     - name: publish
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       run: npm run publish
+  publish_on_mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@master
+        with:
+          node-version: 18
+      - name: install dependencies
+        run: cd executable; npm install
+      - name: publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cd executable; npm run publish
 
   publish_on_win:
     runs-on: windows-latest
