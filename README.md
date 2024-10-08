@@ -8,7 +8,7 @@ Il nostro programma è leggero, facile da usare, e idealmente non necessita di s
 
 Per semplificare il lavoro a tutti gli organizzatori ed arbitri, tuttavia, forniamo anche degli eseguibili da scaricare e aprire con un click!
 
-[Coming soon!](https://www.judoincloud.com)
+[https://github.com/Marrocco-Simone/Judo-in-Cloud-CARE-System/releases](https://github.com/Marrocco-Simone/Judo-in-Cloud-CARE-System/releases)
 
 Il progetto è gratuito, open source e disponibile a tutti quelli che ne vogliano usufruire! Vogliamo aiutare il mondo del judo a progredire, e questo è il nostro contributo!
 
