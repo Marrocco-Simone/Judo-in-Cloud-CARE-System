@@ -18,7 +18,7 @@ module.exports = {
           name: "Judo-in-Cloud-CARE-System",
         },
         draft: true,
-        releaseName: "v${version} Judo in Cloud - CARE System", // Automatically generate release name
+        name: "v${version} Judo in Cloud - CARE System",
       },
     },
   ],
@@ -26,26 +26,26 @@ module.exports = {
     {
       name: "@electron-forge/maker-squirrel",
       config: {
-        name: "judo_in_cloud_care_system",
+        name: "jic_care_system",
       },
     },
     {
       name: "@electron-forge/maker-zip",
       platforms: ["darwin"],
       config: {
-        name: "judo_in_cloud_care_system",
+        name: "jic_care_system",
       },
     },
     {
       name: "@electron-forge/maker-deb",
       config: {
-        name: "judo_in_cloud_care_system",
+        name: "jic_care_system",
       },
     },
     {
       name: "@electron-forge/maker-rpm",
       config: {
-        name: "judo_in_cloud_care_system",
+        name: "jic_care_system",
       },
     },
   ],
