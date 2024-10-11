@@ -461,7 +461,7 @@ function getWebcamStream() {
         cameraSelect.appendChild(newOption);
       });
       cameraSelect.selectedIndex = cameraIndex + 1;
-      cameraSelectForm.onsubmit((e) => {
+      cameraSelectForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const newParams = new URLSearchParams(window.location.search);
         const cameraIndex = cameraSelect.value;
