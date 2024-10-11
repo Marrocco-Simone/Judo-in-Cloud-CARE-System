@@ -20,6 +20,7 @@ const useAudio = urlParams.get("useAudio") === "false" ? false : true;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
+const cameraIndex = urlParams.get("cameraIndex") || 0;
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -100,20 +101,32 @@ const millionFormatter = new Intl.NumberFormat(undefined, {
   notation: "scientific",
 });
 
+/** @type {HTMLButtonElement} */
 const playPauseBtn = document.querySelector(".play-pause-btn");
+/** @type {HTMLButtonElement} */
 const theaterBtn = document.querySelector(".theater-btn");
+/** @type {HTMLButtonElement} */
 const fullScreeBtn = document.querySelector(".full-screen-btn");
 const videoContainer = document.querySelector(".video-container");
+/** @type {HTMLButtonElement} */
 const muteBtn = document.querySelector(".mute-btn");
+/** @type {HTMLInputElement} */
 const volumeSlider = document.querySelector(".volume-slider");
 const currentTimeElem = document.querySelector(".current-time");
 const totalTimeElem = document.querySelector(".total-time");
+/** @type {HTMLButtonElement} */
 const liveBtnElem = document.querySelector(".live-btn");
 const liveDotElem = document.querySelector(".live-dot");
+/** @type {HTMLButtonElement} */
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
+/** @type {HTMLVideoElement} */
 const video = document.querySelector("video");
 const timestampIndicator = document.querySelector(".timestamp-indicator");
+/** @type {HTMLSelectElement} */
+const cameraSelect = document.querySelector(".camera-select");
+/** @type {HTMLFormElement} */
+const cameraSelectForm = document.querySelector(".camera-select-form");
 
 /** recording starting timestamp */
 let startTimestamp = 0;
@@ -440,8 +453,25 @@ function getWebcamStream() {
       facingMode: { exact: "enviroment" },
     })
     .then((stream) => {
+      const videoTracks = stream.getVideoTracks();
+      videoTracks.forEach((track, i) => {
+        const newOption = document.createElement("option");
+        newOption.value = i;
+        newOption.text = track.label;
+        cameraSelect.appendChild(newOption);
+      });
+      cameraSelect.selectedIndex = cameraIndex + 1;
+      cameraSelectForm.onsubmit((e) => {
+        e.preventDefault();
+        const newParams = new URLSearchParams(window.location.search);
+        const cameraIndex = cameraSelect.value;
+        alert(cameraIndex);
+        if (cameraIndex < 0) return;
+        newParams.set("cameraIndex", cameraIndex);
+        window.location.search = newParams.toString();
+      });
       // todo we can add multiple videotracks in the future
-      const videoTrack = stream.getVideoTracks()[0];
+      const videoTrack = videoTracks[cameraIndex];
       /** holder of the webcam audio and video stream */
       const mediaStream = new MediaStream();
       mediaStream.addTrack(videoTrack);
