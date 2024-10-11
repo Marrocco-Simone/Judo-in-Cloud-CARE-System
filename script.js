@@ -465,7 +465,6 @@ function getWebcamStream() {
         e.preventDefault();
         const newParams = new URLSearchParams(window.location.search);
         const cameraIndex = cameraSelect.value;
-        alert(cameraIndex);
         if (cameraIndex < 0) return;
         newParams.set("cameraIndex", cameraIndex);
         window.location.search = newParams.toString();

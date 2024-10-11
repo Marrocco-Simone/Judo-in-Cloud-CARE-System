@@ -433,3 +433,38 @@ video {
     text-align: center;
   }
 }
+
+.camera-select-form {
+  gap: 1rem;
+  padding: 0 1rem;
+}
+
+.camera-select {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  padding: 0.5rem;
+  height: 100%;
+  min-width: 5rem;
+  border: 1px solid #0b5e76;
+  color: #0b5e76;
+  border-radius: 0.25rem;
+  background-color: white;
+}
+
+.camera-select-btn {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  padding: 0.5rem;
+  height: 100%;
+  min-width: 5rem;
+  border: 1px solid #0b5e76;
+  color: #0b5e76;
+  border-radius: 0.25rem;
+  background-color: white;
+
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, transform 150ms;
+}
+.camera-select-btn:hover {
+  background-color: powderblue;
+}
