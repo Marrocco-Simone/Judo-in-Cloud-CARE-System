@@ -400,7 +400,7 @@ function appendToSourceBuffer() {
   getBlobById(
     i,
     (blob, timestamp) => {
-      clearSourceBufferLength();
+      // clearSourceBufferLength();
       blob
         .arrayBuffer()
         .then((arrayBuffer) => {
