@@ -51,14 +51,14 @@ module.exports = {
         },
       },
     },
-    {
-      name: "@electron-forge/maker-dmg",
-      config: {
-        background: "./assets/dmg-background.png",
-        format: "ULFO",
-        icon: "icons/logo_icon.icon",
-      },
-    },
+    // {
+    //   name: "@electron-forge/maker-dmg",
+    //   config: {
+    //     background: "./assets/dmg-background.png",
+    //     format: "ULFO",
+    //     icon: "icons/logo_icon.icon",
+    //   },
+    // },
   ],
   plugins: [
     {
