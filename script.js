@@ -20,7 +20,7 @@ const useAudio = urlParams.get("useAudio") === "false" ? false : true;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
-const cameraIndex = urlParams.get("cameraIndex") || 0;
+const deviceId = urlParams.get("deviceId");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -442,35 +442,24 @@ function moveToTimestamp(timestamp) {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * RETRIVAL OF THE WEBCAM STREAM
 
+let videoTrackLabel;
 getWebcamStream();
 
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
 function getWebcamStream() {
+  // * if there is no deviceId specified, using "true" makes the browser choose the default camera. Works also if the inserted deviceId does not exist
+  const video = deviceId ? { deviceId: deviceId } : true;
   navigator.mediaDevices
     .getUserMedia({
       audio: useAudio,
-      video: { width: 1920, height: 1080 },
-      facingMode: { exact: "enviroment" },
+      video: video,
     })
     .then((stream) => {
-      const videoTracks = stream.getVideoTracks();
-      videoTracks.forEach((track, i) => {
-        const newOption = document.createElement("option");
-        newOption.value = i;
-        newOption.text = track.label;
-        cameraSelect.appendChild(newOption);
-      });
-      cameraSelect.selectedIndex = cameraIndex + 1;
-      cameraSelectForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const newParams = new URLSearchParams(window.location.search);
-        const cameraIndex = cameraSelect.value;
-        if (cameraIndex < 0) return;
-        newParams.set("cameraIndex", cameraIndex);
-        window.location.search = newParams.toString();
-      });
       // todo we can add multiple videotracks in the future
-      const videoTrack = videoTracks[cameraIndex];
+      const videoTrack = stream.getVideoTracks()[0];
+      videoTrackLabel = videoTrack.label;
+      listAllCameraDevices();
+
       /** holder of the webcam audio and video stream */
       const mediaStream = new MediaStream();
       mediaStream.addTrack(videoTrack);
@@ -518,6 +507,29 @@ function getWebcamStream() {
         `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).`
       );
     });
+}
+
+/** use it after the promise of getUserMedia or you cannot have the labels */
+function listAllCameraDevices() {
+  navigator.mediaDevices.enumerateDevices().then((devices) => {
+    const filtered_devices = devices.filter((d) => d.kind === "videoinput");
+
+    filtered_devices.forEach((device) => {
+      const newOption = document.createElement("option");
+      newOption.value = device.deviceId;
+      newOption.text = device.label;
+      cameraSelect.appendChild(newOption);
+    });
+    cameraSelect.selectedIndex =
+      filtered_devices.findIndex((d) => d.label === videoTrackLabel) + 1;
+    cameraSelectForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const newParams = new URLSearchParams(window.location.search);
+      const deviceId = cameraSelect.value;
+      newParams.set("deviceId", deviceId);
+      window.location.search = newParams.toString();
+    });
+  });
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
