@@ -7,6 +7,7 @@ const { FuseV1Options, FuseVersion } = require("@electron/fuses");
 module.exports = {
   packagerConfig: {
     asar: true,
+    icon: "icons/logo_icon",
   },
   rebuildConfig: {},
   publishers: [
@@ -24,7 +25,10 @@ module.exports = {
   makers: [
     {
       name: "@electron-forge/maker-squirrel",
-      config: {},
+      config: {
+        iconUrl: "https://care.judoincloud.com/executable/icons/logo_icon.ico",
+        setupIcon: "icons/logo_icon.ico",
+      },
     },
     {
       name: "@electron-forge/maker-zip",
@@ -33,11 +37,27 @@ module.exports = {
     },
     {
       name: "@electron-forge/maker-deb",
-      config: {},
+      config: {
+        options: {
+          icon: "icons/logo_icon.png",
+        },
+      },
     },
     {
       name: "@electron-forge/maker-rpm",
-      config: {},
+      config: {
+        options: {
+          icon: "icons/logo_icon.png",
+        },
+      },
+    },
+    {
+      name: "@electron-forge/maker-dmg",
+      config: {
+        background: "./assets/dmg-background.png",
+        format: "ULFO",
+        icon: "icons/logo_icon.icon",
+      },
     },
   ],
   plugins: [

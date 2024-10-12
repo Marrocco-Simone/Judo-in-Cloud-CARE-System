@@ -7,3 +7,5 @@ out/
 !package.json
 !package-lock.json
 !forge.config.js
+!icons
+!icons/*

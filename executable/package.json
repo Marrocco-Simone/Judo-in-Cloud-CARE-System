@@ -1,6 +1,6 @@
 {
   "name": "judo-in-cloud-care-system",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Judo in Cloud - CARE System",
   "main": "main.js",
   "scripts": {
@@ -16,6 +16,7 @@
   "devDependencies": {
     "@electron-forge/cli": "^7.5.0",
     "@electron-forge/maker-deb": "^7.5.0",
+    "@electron-forge/maker-dmg": "^7.5.0",
     "@electron-forge/maker-rpm": "^7.5.0",
     "@electron-forge/maker-squirrel": "^7.5.0",
     "@electron-forge/maker-zip": "^7.5.0",
