@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 18
       - name: install dependencies
-        run: cd executable; npm install
+        run: cd executable; npm install; npm i --save-dev appdmg
       - name: publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
