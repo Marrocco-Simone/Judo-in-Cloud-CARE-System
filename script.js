@@ -3,8 +3,6 @@
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 
-/** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
-const MAXTIME = 1 * 60;
 const videoBitsPerSecond = Number(urlParams.get("videoBitsPerSecond"))
   ? Number(urlParams.get("videoBitsPerSecond") * 1000)
   : 500 * 1000;
@@ -345,9 +343,11 @@ mediaSource.addEventListener("sourceopen", () => {
   });
 });
 
+/** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
+const MAXTIME = 1 * 60;
+/** Limit the total buffer size to MAXTIME, this way we don't run out of RAM */
 function clearSourceBufferLength() {
   try {
-    // * Limit the total buffer size to MAXTIME, this way we don't run out of RAM
     if (
       video.buffered.length &&
       video.buffered.end(0) - video.buffered.start(0) > MAXTIME
@@ -400,7 +400,7 @@ function appendToSourceBuffer() {
   getBlobById(
     i,
     (blob, timestamp) => {
-      // clearSourceBufferLength();
+      clearSourceBufferLength();
       blob
         .arrayBuffer()
         .then((arrayBuffer) => {
