@@ -204,7 +204,7 @@ function storeBlob(blob, cb) {
     /** @type {number} */
     const id = e.target.result;
     if (logDatabaseOp) {
-      console.log("Blob stored successfully:", {
+      console.info("Blob stored successfully:", {
         id,
         timestamp: formatTimestamp(timestamp),
         size: `${Math.floor(blob.size / 1000)} kb`,
@@ -237,7 +237,7 @@ function getBlobById(id, cb, errorCb) {
     if (blobRecord) {
       const { blob, timestamp, id } = blobRecord;
       if (logDatabaseOp) {
-        console.log("Blob retrieved:", {
+        console.info("Blob retrieved:", {
           id,
           timestamp: formatTimestamp(timestamp),
           size: `${Math.floor(blob.size / 1000)} kb`,
@@ -344,7 +344,7 @@ mediaSource.addEventListener("sourceopen", () => {
 });
 
 /** The maximum duration of the video sourcebuffer, so not to go over the limit. keep it under 7 minutes */
-const MAXTIME = 1 * 60;
+const MAXTIME = 5 * 60;
 /** Limit the total buffer size to MAXTIME, this way we don't run out of RAM */
 function clearSourceBufferLength() {
   try {
@@ -354,30 +354,31 @@ function clearSourceBufferLength() {
     ) {
       console.log("Reached maximum video length in seconds:", MAXTIME);
 
-      // * sourcebuffer.remove calls updateend when finished, if we dont do this waitBeforeNextAppendToSourceBuffer gets called a lot of times
-      sourceBuffer.removeEventListener(
-        "updateend",
-        waitBeforeNextAppendToSourceBuffer
-      );
+      if (!sourceBuffer.updating) {
+        sourceBuffer.removeEventListener(
+          "updateend",
+          waitBeforeNextAppendToSourceBuffer
+        );
 
-      sourceBuffer.remove(
-        video.buffered.start(0),
-        ((video.buffered.start(0) + video.buffered.end(0)) * 3) / 4
-      );
+        sourceBuffer.remove(
+          video.buffered.start(0),
+          video.buffered.start(0) + MAXTIME / 2
+        );
 
-      sourceBuffer.addEventListener(
-        "updateend",
-        () => {
-          sourceBuffer.addEventListener(
-            "updateend",
-            waitBeforeNextAppendToSourceBuffer
-          );
-        },
-        { once: true }
-      );
+        sourceBuffer.addEventListener(
+          "updateend",
+          () => {
+            sourceBuffer.addEventListener(
+              "updateend",
+              waitBeforeNextAppendToSourceBuffer
+            );
+          },
+          { once: true }
+        );
+      }
     }
   } catch (e) {
-    console.error("Error whie clearing sourcebuffer lenght:", e);
+    console.error("Error while clearing source buffer length:", e);
   }
 }
 
@@ -502,7 +503,7 @@ function getWebcamStream() {
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
     .catch((err) => {
-      console.log(err);
+      console.error(err);
       alert(
         `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).`
       );
