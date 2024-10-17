@@ -11,6 +11,10 @@
   color: powderblue;
 }
 
+.hidden {
+  display: none;
+}
+
 /* * Custom complex classes */
 
 .jic-wrapper {

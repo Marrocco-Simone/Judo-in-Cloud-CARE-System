@@ -468,3 +468,15 @@ video {
 .camera-select-btn:hover {
   background-color: powderblue;
 }
+
+.dropped-frames-warning {
+  background-color: red;
+  color: black;
+  font-weight: bold;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  margin: 0 1rem;
+  text-align: center;
+}

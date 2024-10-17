@@ -5,7 +5,7 @@ const urlParams = new URLSearchParams(queryString);
 
 const videoBitsPerSecond = Number(urlParams.get("videoBitsPerSecond"))
   ? Number(urlParams.get("videoBitsPerSecond") * 1000)
-  : 500 * 1000;
+  : 2000 * 1000;
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
   ? Number(urlParams.get("REFRESHRATE")) * 1000
@@ -692,6 +692,19 @@ video.addEventListener("timeupdate", () => {
 
   const liveDotColor = percent > 0.95 ? "red" : "#bbb";
   liveDotElem.style.setProperty("background-color", liveDotColor);
+
+  const droppedFrames = video.getVideoPlaybackQuality().droppedVideoFrames;
+  const totalFrames = video.getVideoPlaybackQuality().totalVideoFrames;
+
+  if (droppedFrames > totalFrames * 0.1) {
+    // More than 10% frames are being dropped, lower the bitrate
+    const newVideoBitsPerSecond = (videoBitsPerSecond / 1000) * 0.75;
+    const warning = `Stai perdendo troppi frame. Abbassa i "videoBitsPerSecond" sotto a: ${newVideoBitsPerSecond}`;
+    console.log(warning);
+    const warningElem = document.querySelector(".dropped-frames-warning");
+    warningElem.textContent = warning;
+    warningElem.classList.remove("hidden");
+  }
 });
 
 function checkVideoIsGoingOn() {
