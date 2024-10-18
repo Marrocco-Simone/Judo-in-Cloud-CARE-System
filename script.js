@@ -372,6 +372,8 @@ function clearSourceBufferLength() {
               "updateend",
               waitBeforeNextAppendToSourceBuffer
             );
+            // * recover any delay we got, avoid random freezing of the video
+            video.currentTime = video.buffered.end(0);
           },
           { once: true }
         );
