@@ -136,12 +136,19 @@
 
       <main class="jic-main">
         <!-- ! SELECT CAMERA -->
-        <form class="camera-select-form">
-          <select class="camera-select">
-            <option value="">Scegli telecamera</option>
-          </select>
-          <button type="submit" class="camera-select-btn">Cambia</button>
-        </form>
+        <div class="top-bar">
+          <form class="camera-select-form">
+            <select class="camera-select white-btn">
+              <option value="">Scegli telecamera</option>
+            </select>
+            <button type="submit" class="camera-select-btn white-btn">
+              Cambia
+            </button>
+          </form>
+          <div class="action-buttons">
+            <button class="white-btn download-btn">Download</button>
+          </div>
+        </div>
         <p class="dropped-frames-warning hidden">This is the warning</p>
         <!-- ! VIDEO PLAYER -->
         <div class="video-container paused theater" data-volume-level="muted">
@@ -332,8 +339,6 @@
             </svg>
           </div>
         </div>
-
-        <!-- <button class="download-btn">Download</button> -->
 
         <!-- ! INSTRUCTIONS -->
         <div class="instruction-container">
