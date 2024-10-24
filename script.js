@@ -9,11 +9,11 @@ const videoBitsPerSecond = Number(urlParams.get("videoBitsPerSecond"))
 /** The blob lenght from a MediaRecorder in milliseconds. It decides also when a new blob is stored / retrieved */
 const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
   ? Number(urlParams.get("REFRESHRATE")) * 1000
-  : 2 * 1000;
+  : 1 * 1000;
 /** how much to wait from recording to showing the first blob of the live. Total delay to the live is this times REFRESHRATE */
 const DELAY_MULTIPLIER = Number(urlParams.get("DELAY_MULTIPLIER"))
   ? Number(urlParams.get("DELAY_MULTIPLIER"))
-  : 2;
+  : 3;
 const useAudio = urlParams.get("useAudio") === "false" ? false : true;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
@@ -304,7 +304,19 @@ function getArrayOfBlobs(startId, endId, cb) {
     /** @type {{blob: Blob, timestamp: number, id: number}[]} */
     const blobs = e.target.result;
     if (blobs.length) {
-      // console.log("Blobs retrieved:", blobs);
+      console.log("Blobs retrieved:", blobs.length);
+      console.log(
+        "Total size:",
+        blobs.reduce((acc, blobRecord) => acc + blobRecord.blob.size, 0) / 1024,
+        "kb"
+      );
+      console.log(
+        "Total time:",
+        "from",
+        formatTimestamp(blobs[0].timestamp),
+        "to",
+        formatTimestamp(blobs[blobs.length - 1].timestamp)
+      );
       cb(blobs.map((blobRecord) => blobRecord.blob));
     } else {
       console.error(`No blobs found in range ${startId}-${endId}.`);
@@ -846,22 +858,22 @@ function getVideoTimelinePercent(e) {
 }
 
 // * save video
-// const downloadBtn = document.querySelector(".download-btn");
-// downloadBtn.addEventListener("click", saveVideo);
+const downloadBtn = document.querySelector(".download-btn");
+downloadBtn.addEventListener("click", saveVideo);
 
-// function saveVideo() {
-//   getArrayOfBlobs(i - MAXTIME, i + MAXTIME, (arrayOfBlobs) => {
-//     const blob = new Blob(arrayOfBlobs, { type: mimeType });
-//     const url = window.URL.createObjectURL(blob);
-//     const a = document.createElement("a");
-//     a.style.display = "none";
-//     a.href = url;
-//     a.download = "recorded-video.webm";
-//     document.body.appendChild(a);
-//     a.click();
-//     setTimeout(() => {
-//       document.body.removeChild(a);
-//       window.URL.revokeObjectURL(url);
-//     }, 100);
-//   });
-// }
+function saveVideo() {
+  getArrayOfBlobs(i - MAXTIME, i + MAXTIME, (arrayOfBlobs) => {
+    const blob = new Blob(arrayOfBlobs, { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = "recorded-video.webm";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+  });
+}
