@@ -290,9 +290,9 @@ function getNearestBlobByTimestamp(targetTimestamp, cb) {
  * Retrieve all blobs from the indexedDB between two ids
  * @param {number} startId
  * @param {number} endId
- * @param {(blobs: Blob[]) => void} cb
+ * @param {(blobs: Blob) => void} cb
  */
-function getArrayOfBlobs(startId, endId, cb) {
+function getUnifiedBlobs(startId, endId, cb) {
   const transaction = db.transaction(["blobs"], "readonly");
   const blobStore = transaction.objectStore("blobs");
 
@@ -302,25 +302,21 @@ function getArrayOfBlobs(startId, endId, cb) {
   );
   request.addEventListener("success", (e) => {
     /** @type {{blob: Blob, timestamp: number, id: number}[]} */
-    const blobs = e.target.result;
-    if (blobs.length) {
-      console.log("Blobs retrieved:", blobs.length);
-      console.log(
-        "Total size:",
-        blobs.reduce((acc, blobRecord) => acc + blobRecord.blob.size, 0) / 1024,
-        "kb"
-      );
-      console.log(
-        "Total time:",
-        "from",
-        formatTimestamp(blobs[0].timestamp),
-        "to",
-        formatTimestamp(blobs[blobs.length - 1].timestamp)
-      );
-      cb(blobs.map((blobRecord) => blobRecord.blob));
-    } else {
+    const blobRecords = e.target.result;
+    if (!blobRecords.length) {
       console.error(`No blobs found in range ${startId}-${endId}.`);
+      return;
     }
+
+    blobRecords.sort((a, b) => a.timestamp - b.timestamp);
+    console.log("Blobs retrieved:", blobRecords.length);
+    const startTime = formatTimestamp(blobRecords[0].timestamp);
+    const endTime = formatTimestamp(blobRecords.at(-1).timestamp);
+    console.log(`Total time: ${startTime} - ${endTime}`);
+
+    const blobs = blobRecords.map((blobRecord) => blobRecord.blob);
+    const blob = new Blob(blobs, { type: mimeType });
+    cb(blob);
   });
 }
 
@@ -862,8 +858,7 @@ const downloadBtn = document.querySelector(".download-btn");
 downloadBtn.addEventListener("click", saveVideo);
 
 function saveVideo() {
-  getArrayOfBlobs(i - MAXTIME, i + MAXTIME, (arrayOfBlobs) => {
-    const blob = new Blob(arrayOfBlobs, { type: mimeType });
+  getUnifiedBlobs(i - MAXTIME, i + MAXTIME, (blob) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.style.display = "none";
