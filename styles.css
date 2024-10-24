@@ -374,6 +374,7 @@ video {
 .query-form-element p {
   margin: 0;
   padding: 0;
+  width: 50%;
 }
 
 .query-form-element input {
@@ -383,6 +384,8 @@ video {
   color: #0b5e76;
   font-size: 1.25rem;
   line-height: 1.75rem;
+  min-width: 0;
+  width: 50%;
 }
 
 .query-form-element input[type="checkbox"] {
