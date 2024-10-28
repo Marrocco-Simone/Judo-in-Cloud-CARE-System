@@ -1002,12 +1002,56 @@ function saveVideo() {
   );
 }
 
+window.prompt = (message, defaultText) => {
+  console.log({ message, defaultText });
+  return "";
+};
+
 /**
  * Unify indipendent blobs in a single one
  * @param {Blob[]} blobs
  * @param {(blob: Blob) => void} cb
  */
-function unifyBlobs(blobs, cb) {
-  const blob = new Blob(blobs, { type: mimeType });
+async function unifyBlobs(blobs, cb) {
+  const arrayBuffers = await Promise.all(
+    blobs.map((blob) => blob.arrayBuffer())
+  );
+  const uint8array = arrayBuffers.map((ab) => new Uint8Array(ab));
+  const MEMFS = uint8array.map((data, i) => ({
+    name: `file${i}.webm`,
+    data,
+  }));
+  const fileListContent = MEMFS.map((file) => `file '${file.name}'`).join("\n");
+  const fileListArray = new TextEncoder().encode(fileListContent);
+  MEMFS.push({
+    name: "filelist.txt",
+    data: fileListArray,
+  });
+
+  const command = `-f concat -safe 0 -i filelist.txt -c copy output.webm`;
+
+  let stdout = "";
+  let stderr = "";
+
+  const result = ffmpeg({
+    // arguments: ["-version"],
+    arguments: command.split(" "),
+    MEMFS,
+    print: (data) => {
+      stdout += data + "\n";
+    },
+    printErr: (data) => {
+      stderr += data + "\n";
+    },
+    onExit: (code) => {
+      console.log("Process exited with code " + code);
+      if (stdout) console.log("stdout:", stdout);
+      if (stderr) console.log("stderr:", stderr);
+    },
+  });
+
+  /** @type {Uint8Array} */
+  const outUint8Array = result.MEMFS[0].data;
+  const blob = new Blob([outUint8Array], { type: "video/webm" });
   cb(blob);
 }
