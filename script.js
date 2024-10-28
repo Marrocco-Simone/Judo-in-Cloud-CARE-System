@@ -945,12 +945,14 @@ deleteInputElement.placeholder = keyWord;
 deleteFormElement.addEventListener("keydown", (e) => e.stopPropagation());
 deleteFormElement.addEventListener("submit", (e) => {
   e.preventDefault();
-  if (deleteInputElement.value === keyWord) {
+  const value = deleteInputElement.value;
+  deleteInputElement.value = "";
+  if (value === keyWord) {
     console.log("delete db");
+    db.close();
     db = null;
     deleteDatabase(() => (window.location.search = window.location.search));
   } else {
     alert(`Hai scritto male la parola ${keyWord}, riprova.`);
-    deleteInputElement.value = "";
   }
 });
