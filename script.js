@@ -140,6 +140,7 @@ let currentTimestamp = 0;
 
 const dbName = "blobStoreDB";
 const dbVersion = 1;
+const streamCollectionName = "streamBlobs";
 /** @type {IDBDatabase} */
 let db;
 
@@ -150,10 +151,10 @@ function openDbConnection() {
   const request = indexedDB.open(dbName, dbVersion);
   request.addEventListener("upgradeneeded", (e) => {
     db = e.target.result;
-    if (db.objectStoreNames.contains("blobs")) {
+    if (db.objectStoreNames.contains(streamCollectionName)) {
       return;
     }
-    const blobStore = db.createObjectStore("blobs", {
+    const blobStore = db.createObjectStore(streamCollectionName, {
       keyPath: "id",
       autoIncrement: true,
     });
@@ -165,10 +166,10 @@ function openDbConnection() {
   request.addEventListener("success", (e) => {
     db = e.target.result;
 
-    getFirstBlob((blob, timestamp, id) => {
+    getFirstBlob(streamCollectionName, (blob, timestamp, id) => {
       const firstId = id;
       const firstTimestamp = timestamp;
-      getLastBlob((blob, timestamp, id) => {
+      getLastBlob(streamCollectionName, (blob, timestamp, id) => {
         const lastId = id;
         const lastTimestamp = timestamp;
         console.log("First blob:", {
@@ -211,11 +212,12 @@ function deleteDatabase(cb) {
 /**
  * Store a blob in the indexedDB with a timestamp and a unique id autoincremented
  * @param {Blob} blob
+ * @param {string} collectionName
  * @param {undefined | () => void} cb
  */
-function storeBlob(blob, cb) {
-  const transaction = db.transaction(["blobs"], "readwrite");
-  const blobStore = transaction.objectStore("blobs");
+function storeBlob(blob, collectionName, cb) {
+  const transaction = db.transaction([collectionName], "readwrite");
+  const blobStore = transaction.objectStore(collectionName);
 
   const timestamp = new Date().getTime(); // Store current timestamp
   const blobRecord = { blob, timestamp };
@@ -242,12 +244,13 @@ function storeBlob(blob, cb) {
 
 /**
  * Retrieve the first or the last blob saved if it exist, or do nothing
+ * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number, id: number) => void} cb
  * @param {"first" | "last"} type
  */
-function getFirstOrLastBlob(cb, type) {
-  const transaction = db.transaction(["blobs"], "readonly");
-  const blobStore = transaction.objectStore("blobs");
+function getFirstOrLastBlob(collectionName, cb, type) {
+  const transaction = db.transaction([collectionName], "readonly");
+  const blobStore = transaction.objectStore(collectionName);
   const index = blobStore.index("timestamp");
 
   const direction = type === "first" ? "next" : "prev";
@@ -275,25 +278,30 @@ function getFirstOrLastBlob(cb, type) {
 
 /**
  * Retrieve the first blob saved if it exist, or undefined
+ * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number, id: number) => void} cb
  */
-const getFirstBlob = (cb) => getFirstOrLastBlob(cb, "first");
+const getFirstBlob = (collectionName, cb) =>
+  getFirstOrLastBlob(collectionName, cb, "first");
 
 /**
  * Retrieve the last blob saved if it exist, or undefined
+ * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number, id: number) => void} cb
  */
-const getLastBlob = (cb) => getFirstOrLastBlob(cb, "last");
+const getLastBlob = (collectionName, cb) =>
+  getFirstOrLastBlob(collectionName, cb, "last");
 
 /**
  * Retrieve a blob from the indexedDB by its id
  * @param {number} id
+ * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number) => void} cb
  * @param {() => void} errorCb
  */
-function getBlobById(id, cb, errorCb) {
-  const transaction = db.transaction(["blobs"], "readonly");
-  const blobStore = transaction.objectStore("blobs");
+function getBlobById(id, collectionName, cb, errorCb) {
+  const transaction = db.transaction([collectionName], "readonly");
+  const blobStore = transaction.objectStore(collectionName);
 
   const request = blobStore.get(id);
   request.addEventListener("error", (e) => {
@@ -325,11 +333,12 @@ function getBlobById(id, cb, errorCb) {
 /**
  * Retrieve a blob from the indexedDB by its timestamp
  * @param {number} targetTimestamp
+ * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number, id: number) => void} cb
  */
-function getNearestBlobByTimestamp(targetTimestamp, cb) {
-  const transaction = db.transaction(["blobs"], "readonly");
-  const blobStore = transaction.objectStore("blobs");
+function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
+  const transaction = db.transaction([collectionName], "readonly");
+  const blobStore = transaction.objectStore(collectionName);
   const index = blobStore.index("timestamp");
 
   const cursorRequest = index.openCursor(null, "prev");
@@ -359,11 +368,12 @@ function getNearestBlobByTimestamp(targetTimestamp, cb) {
  * Retrieve all blobs from the indexedDB between two ids
  * @param {number} startId
  * @param {number} endId
+ * @param {string} collectionName
  * @param {(blobs: Blob[]) => void} cb
  */
-function getBlobsInRange(startId, endId, cb) {
-  const transaction = db.transaction(["blobs"], "readonly");
-  const blobStore = transaction.objectStore("blobs");
+function getBlobsInRange(startId, endId, collectionName, cb) {
+  const transaction = db.transaction([collectionName], "readonly");
+  const blobStore = transaction.objectStore(collectionName);
 
   const request = blobStore.getAll(IDBKeyRange.bound(startId, endId));
   request.addEventListener("error", (e) =>
@@ -517,6 +527,7 @@ function appendToSourceBuffer() {
 
   getBlobById(
     i,
+    streamCollectionName,
     (blob, timestamp) => {
       clearSourceBufferLength();
       blob
@@ -549,12 +560,16 @@ function moveToTimestamp(timestamp) {
   if (timestamp > lastTimestamp) return returnLive();
   if (timestamp < startTimestamp) timestamp = startTimestamp;
 
-  getNearestBlobByTimestamp(timestamp, (blob, timestamp, id) => {
-    // * next blob to load should be the one we found
-    i = id;
-    // * return in the end of the video
-    video.currentTime = video.buffered.end(0);
-  });
+  getNearestBlobByTimestamp(
+    timestamp,
+    streamCollectionName,
+    (blob, timestamp, id) => {
+      // * next blob to load should be the one we found
+      i = id;
+      // * return in the end of the video
+      video.currentTime = video.buffered.end(0);
+    }
+  );
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -611,7 +626,7 @@ function getWebcamStream() {
       mediaRecorder.addEventListener("stop", () => {
         const blob = new Blob(blobs, { type: mimeType });
         // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
-        storeBlob(blob);
+        storeBlob(blob, streamCollectionName);
         blobs.length = 0;
         mediaRecorder.start(REFRESHRATE);
       });
@@ -985,20 +1000,24 @@ const downloadBtn = document.querySelector(".download-btn");
 downloadBtn.addEventListener("click", saveVideo);
 
 function saveVideo() {
-  getBlobsInRange(i - MAXTIME / 5, i + (MAXTIME * 4) / 5, (blobs) =>
-    unifyBlobs(blobs, (blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = "recorded-video.webm";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }, 100);
-    })
+  getBlobsInRange(
+    i - MAXTIME / 5,
+    i + (MAXTIME * 4) / 5,
+    streamCollectionName,
+    (blobs) =>
+      unifyBlobs(blobs, (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = "recorded-video.webm";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      })
   );
 }
 
