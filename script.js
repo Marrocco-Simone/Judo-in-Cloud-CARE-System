@@ -141,6 +141,7 @@ let currentTimestamp = 0;
 const dbName = "blobStoreDB";
 const dbVersion = 1;
 const streamCollectionName = "streamBlobs";
+const downloadCollectionName = "downloadBlobs";
 /** @type {IDBDatabase} */
 let db;
 
@@ -151,14 +152,21 @@ function openDbConnection() {
   const request = indexedDB.open(dbName, dbVersion);
   request.addEventListener("upgradeneeded", (e) => {
     db = e.target.result;
-    if (db.objectStoreNames.contains(streamCollectionName)) {
-      return;
+    if (!db.objectStoreNames.contains(streamCollectionName)) {
+      const blobStore = db.createObjectStore(streamCollectionName, {
+        keyPath: "id",
+        autoIncrement: true,
+      });
+      blobStore.createIndex("timestamp", "timestamp", { unique: false });
     }
-    const blobStore = db.createObjectStore(streamCollectionName, {
-      keyPath: "id",
-      autoIncrement: true,
-    });
-    blobStore.createIndex("timestamp", "timestamp", { unique: false });
+
+    if (!db.objectStoreNames.contains(downloadCollectionName)) {
+      const downloadStore = db.createObjectStore(downloadCollectionName, {
+        keyPath: "id",
+        autoIncrement: true,
+      });
+      downloadStore.createIndex("timestamp", "timestamp", { unique: false });
+    }
   });
   request.addEventListener("error", (e) => {
     console.error("Error opening database:", e.target.errorCode);
@@ -230,7 +238,7 @@ function storeBlob(blob, collectionName, cb) {
     /** @type {number} */
     const id = e.target.result;
     if (logDatabaseOp) {
-      console.info("Blob stored successfully:", {
+      console.info(`Blob stored in ${collectionName}:`, {
         id,
         timestamp: formatTimestamp(timestamp),
         size: `${Math.floor(blob.size / 1000)} kb`,
@@ -314,7 +322,7 @@ function getBlobById(id, collectionName, cb, errorCb) {
     if (blobRecord) {
       const { blob, timestamp, id } = blobRecord;
       if (logDatabaseOp) {
-        console.info("Blob retrieved:", {
+        console.info(`Blob retrieved from ${collectionName}:`, {
           id,
           timestamp: formatTimestamp(timestamp),
           size: `${Math.floor(blob.size / 1000)} kb`,
@@ -575,6 +583,14 @@ function moveToTimestamp(timestamp) {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * RETRIVAL OF THE WEBCAM STREAM
 
+/** The duration of the video to download in milliseconds */
+const DOWNLOAD_DURATION = MAXTIME * 1000;
+
+/** @type {MediaRecorder} */
+let streamMediaRecorder;
+/** @type {MediaRecorder} */
+let downloadMediaRecorder;
+
 let videoTrackLabel;
 getWebcamStream();
 
@@ -605,33 +621,16 @@ function getWebcamStream() {
         throw new Error(`Mime type "${mimeType}" is not supported.`);
       }
 
-      /** saves the webcam stream to various Blobs */
-      const mediaRecorder = new MediaRecorder(mediaStream, {
-        audioBitsPerSecond: useAudio ? 128000 : undefined,
-        videoBitsPerSecond: videoBitsPerSecond,
-        mimeType: mimeType,
-      });
-
-      /** @type {Blob[]} */
-      const blobs = [];
-
-      mediaRecorder.addEventListener("dataavailable", (e) => {
-        const blob = e.data;
-        // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
-        blobs.push(blob);
-        // * stopping and starting the mediaRecorder takes 10 ms, no worries
-        mediaRecorder.stop();
-      });
-
-      mediaRecorder.addEventListener("stop", () => {
-        const blob = new Blob(blobs, { type: mimeType });
-        // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
-        storeBlob(blob, streamCollectionName);
-        blobs.length = 0;
-        mediaRecorder.start(REFRESHRATE);
-      });
-
-      mediaRecorder.start(REFRESHRATE);
+      streamMediaRecorder = createMediaRecorder(
+        mediaStream,
+        REFRESHRATE,
+        streamCollectionName
+      );
+      downloadMediaRecorder = createMediaRecorder(
+        mediaStream,
+        DOWNLOAD_DURATION,
+        downloadCollectionName
+      );
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
     .catch((err) => {
@@ -640,6 +639,47 @@ function getWebcamStream() {
         `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).`
       );
     });
+}
+
+/**
+ * create a mediarecorder and save its blobs to the indexedDB
+ * @param {MediaStream} mediaStream
+ * @param {number} refreshRate
+ * @param {string} collectionName
+ * @return {MediaRecorder}
+ */
+function createMediaRecorder(mediaStream, refreshRate, collectionName) {
+  console.log(
+    `Creating mediaRecorder for ${collectionName} with ${refreshRate}`
+  );
+  /** saves the webcam stream to various Blobs */
+  const mediaRecorder = new MediaRecorder(mediaStream, {
+    audioBitsPerSecond: useAudio ? 128000 : undefined,
+    videoBitsPerSecond: videoBitsPerSecond,
+    mimeType: mimeType,
+  });
+
+  /** @type {Blob[]} */
+  const blobs = [];
+
+  mediaRecorder.addEventListener("dataavailable", (e) => {
+    const blob = e.data;
+    // console.log(`blob size: ${Math.floor(blob.size / 1000)} kb`);
+    blobs.push(blob);
+    // * stopping and starting the mediaRecorder takes 10 ms, no worries
+    mediaRecorder.stop();
+  });
+
+  mediaRecorder.addEventListener("stop", () => {
+    const blob = new Blob(blobs, { type: mimeType });
+    // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
+    storeBlob(blob, collectionName);
+    blobs.length = 0;
+    mediaRecorder.start(refreshRate);
+  });
+
+  mediaRecorder.start(refreshRate);
+  return mediaRecorder;
 }
 
 /** use it after the promise of getUserMedia or you cannot have the labels */
@@ -1000,33 +1040,28 @@ const downloadBtn = document.querySelector(".download-btn");
 downloadBtn.addEventListener("click", saveVideo);
 
 function saveVideo() {
-  getBlobsInRange(
-    i - MAXTIME / 5,
-    i + (MAXTIME * 4) / 5,
-    streamCollectionName,
-    (blobs) =>
-      unifyBlobs(blobs, (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = "recorded-video.webm";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        }, 100);
-      })
+  downloadMediaRecorder.stop();
+  getNearestBlobByTimestamp(
+    currentTimestamp + DOWNLOAD_DURATION,
+    downloadCollectionName,
+    downloadBlob
   );
 }
 
 /**
- * Unify indipendent blobs in a single one
- * @param {Blob[]} blobs
- * @param {(blob: Blob) => void} cb
+ * Given a blob, download it as a file
+ * @param {Blob} blob
  */
-function unifyBlobs(blobs, cb) {
-  const blob = new Blob(blobs, { type: mimeType });
-  cb(blob);
+function downloadBlob(blob) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = "recorded-video.webm";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, 100);
 }
