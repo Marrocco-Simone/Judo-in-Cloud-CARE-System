@@ -441,15 +441,33 @@
           </div>
           <label>
             <p>Qualita video</p>
-            <input id="videoBitsInput" type="number" min="0" step="500" />
+            <input
+              id="videoBitsInput"
+              class="white-input"
+              type="number"
+              min="0"
+              step="500"
+            />
           </label>
           <label>
             <p>Refresh rate</p>
-            <input id="refreshRateInput" type="number" min="0" step="0.25" />
+            <input
+              id="refreshRateInput"
+              class="white-input"
+              type="number"
+              min="0"
+              step="0.25"
+            />
           </label>
           <label>
             <p>Moltiplicatore ritardo</p>
-            <input id="delayMultiplierInput" type="number" min="0" step="1" />
+            <input
+              id="delayMultiplierInput"
+              class="white-input"
+              type="number"
+              min="0"
+              step="1"
+            />
           </label>
           <label>
             <p>Usa audio</p>
@@ -463,6 +481,16 @@
             <p>More video info</p>
             <input id="showMoreVideoInfoInput" type="checkbox" />
           </label>
+        </form>
+
+        <!-- ! DELETE ALL DATA FORM -->
+        <form class="delete-all-data-form">
+          <label class="delete-all-data-text" for="deleteAllDataInput">
+            <strong>Cancella tutto il video registrato</strong>
+            <em>Scrivi "Elimina" per pulire il database</em>
+          </label>
+          <input id="deleteAllDataInput" class="white-input" type="text" />
+          <button class="white-btn" type="submit">Elimina</button>
         </form>
       </main>
 

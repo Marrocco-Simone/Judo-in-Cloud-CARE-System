@@ -143,8 +143,7 @@ const dbVersion = 1;
 /** @type {IDBDatabase} */
 let db;
 
-// todo instead of deleting the db when starting, we can recover from the last saved?
-deleteDatabase(() => openDbConnection());
+openDbConnection();
 
 /** Open the indexedDB connection */
 function openDbConnection() {
@@ -165,6 +164,26 @@ function openDbConnection() {
   });
   request.addEventListener("success", (e) => {
     db = e.target.result;
+
+    getFirstBlob((blob, timestamp, id) => {
+      const firstId = id;
+      const firstTimestamp = timestamp;
+      getLastBlob((blob, timestamp, id) => {
+        const lastId = id;
+        const lastTimestamp = timestamp;
+        console.log("First blob:", {
+          id: firstId,
+          timestamp: formatTimestamp(firstTimestamp),
+        });
+        console.log("Last blob:", {
+          id: lastId,
+          timestamp: formatTimestamp(lastTimestamp),
+        });
+        startTimestamp = firstTimestamp;
+        i = lastId;
+      });
+    });
+
     console.log("Database opened successfully.");
   });
 }
@@ -215,6 +234,51 @@ function storeBlob(blob, cb) {
     if (cb) cb();
   });
 }
+
+/**
+ * Retrieve the first or the last blob saved if it exist, or do nothing
+ * @param {(blob: Blob, timestamp: number, id: number) => void} cb
+ * @param {"first" | "last"} type
+ */
+function getFirstOrLastBlob(cb, type) {
+  const transaction = db.transaction(["blobs"], "readonly");
+  const blobStore = transaction.objectStore("blobs");
+  const index = blobStore.index("timestamp");
+
+  const direction = type === "first" ? "next" : "prev";
+  const cursorRequest = index.openCursor(null, direction);
+  cursorRequest.addEventListener("error", (e) =>
+    console.error("Error opening cursor:", e.target.errorCode)
+  );
+  cursorRequest.addEventListener("success", (e) => {
+    /** @type {IDBCursorWithValue} */
+    const cursor = e.target.result;
+    if (!cursor) {
+      console.log("Database is clear");
+      return;
+    }
+    /** @type {{blob: Blob, timestamp: number, id: number}} */
+    const blobRecord = cursor.value;
+    if (!blobRecord) {
+      console.log("Database is clear");
+      return;
+    }
+    const { blob, timestamp, id } = blobRecord;
+    cb(blob, timestamp, id);
+  });
+}
+
+/**
+ * Retrieve the first blob saved if it exist, or undefined
+ * @param {(blob: Blob, timestamp: number, id: number) => void} cb
+ */
+const getFirstBlob = (cb) => getFirstOrLastBlob(cb, "first");
+
+/**
+ * Retrieve the last blob saved if it exist, or undefined
+ * @param {(blob: Blob, timestamp: number, id: number) => void} cb
+ */
+const getLastBlob = (cb) => getFirstOrLastBlob(cb, "last");
 
 /**
  * Retrieve a blob from the indexedDB by its id
@@ -872,3 +936,21 @@ function saveVideo() {
     }, 100);
   });
 }
+
+// * delete db
+const deleteFormElement = document.querySelector(".delete-all-data-form");
+const deleteInputElement = document.getElementById("deleteAllDataInput");
+const keyWord = "Elimina";
+deleteInputElement.placeholder = keyWord;
+deleteFormElement.addEventListener("keydown", (e) => e.stopPropagation());
+deleteFormElement.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (deleteInputElement.value === keyWord) {
+    console.log("delete db");
+    db = null;
+    deleteDatabase(() => (window.location.search = window.location.search));
+  } else {
+    alert(`Hai scritto male la parola ${keyWord}, riprova.`);
+    deleteInputElement.value = "";
+  }
+});

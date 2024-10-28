@@ -377,17 +377,6 @@ video {
   width: 50%;
 }
 
-.query-form-element input {
-  padding: 0.5rem;
-  border: 1px solid #0b5e76;
-  border-radius: 0.25rem;
-  color: #0b5e76;
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-  min-width: 0;
-  width: 50%;
-}
-
 .query-form-element input[type="checkbox"] {
   width: 2rem;
   height: 2rem;
@@ -463,6 +452,17 @@ video {
   background-color: powderblue;
 }
 
+.white-input {
+  padding: 0.5rem;
+  border: 1px solid #0b5e76;
+  border-radius: 0.25rem;
+  color: #0b5e76;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  min-width: 0;
+  width: 50%;
+}
+
 .dropped-frames-warning {
   background-color: red;
   color: black;
@@ -473,4 +473,29 @@ video {
   line-height: 1.75rem;
   margin: 0 1rem;
   text-align: center;
+}
+
+.delete-all-data-form {
+  display: flex;
+  justify-content: space-evenly;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: red;
+  width: clamp(300px, 90%, 1100px);
+  margin: auto;
+}
+
+@media (orientation: portrait) {
+  .delete-all-data-form {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.delete-all-data-text {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  display: flex;
+  flex-direction: column;
 }
