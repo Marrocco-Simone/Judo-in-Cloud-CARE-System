@@ -354,7 +354,7 @@ function getNearestBlobByTimestamp(targetTimestamp, cb) {
  * Retrieve all blobs from the indexedDB between two ids
  * @param {number} startId
  * @param {number} endId
- * @param {(blobs: Blob) => void} cb
+ * @param {(blob: Blob) => void} cb
  */
 function getUnifiedBlobs(startId, endId, cb) {
   const transaction = db.transaction(["blobs"], "readonly");
@@ -374,14 +374,26 @@ function getUnifiedBlobs(startId, endId, cb) {
 
     blobRecords.sort((a, b) => a.timestamp - b.timestamp);
     console.log("Blobs retrieved:", blobRecords.length);
-    const startTime = formatTimestamp(blobRecords[0].timestamp);
-    const endTime = formatTimestamp(blobRecords.at(-1).timestamp);
-    console.log(`Total time: ${startTime} - ${endTime}`);
+    const initialTimeStamp = blobRecords[0].timestamp;
+    const finalTimeStamp = blobRecords.at(-1).timestamp;
+    const startTime = formatTimestamp(initialTimeStamp);
+    const endTime = formatTimestamp(finalTimeStamp);
+    const totalTime = formatTime(finalTimeStamp - initialTimeStamp);
+    console.log(`Total time: ${startTime} - ${endTime} (${totalTime})`);
 
     const blobs = blobRecords.map((blobRecord) => blobRecord.blob);
-    const blob = new Blob(blobs, { type: mimeType });
-    cb(blob);
+    unifyBlobs(blobs, cb);
   });
+}
+
+/**
+ * Unify indipendent blobs in a single one
+ * @param {Blob[]} blobs
+ * @param {(blob: Blob) => void} cb
+ */
+function unifyBlobs(blobs, cb) {
+  const blob = new Blob(blobs, { type: mimeType });
+  cb(blob);
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
