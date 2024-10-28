@@ -1040,11 +1040,31 @@ const downloadBtn = document.querySelector(".download-btn");
 downloadBtn.addEventListener("click", saveVideo);
 
 function saveVideo() {
-  downloadMediaRecorder.stop();
   getNearestBlobByTimestamp(
     currentTimestamp + DOWNLOAD_DURATION,
     downloadCollectionName,
-    downloadBlob
+    (blob, timestamp, id) => {
+      const initialTime = timestamp - DOWNLOAD_DURATION;
+      const finalTime = timestamp;
+      if (currentTimestamp > finalTime) {
+        alert(
+          "Il pezzo attuale sta ancora venendo registrato. Aspetta un paio di minuti."
+        );
+        return;
+      }
+      if (currentTimestamp < initialTime) {
+        // ? it should not happen
+        alert(
+          "C'è stato un errore. Questo pezzo di video non è disponibile per il download."
+        );
+        return;
+      }
+      const filename = `video_${formatTimestamp(initialTime)}_${formatTimestamp(
+        finalTime
+      )}.webm`;
+
+      downloadBlob(blob, filename);
+    }
   );
 }
 
@@ -1052,12 +1072,12 @@ function saveVideo() {
  * Given a blob, download it as a file
  * @param {Blob} blob
  */
-function downloadBlob(blob) {
+function downloadBlob(blob, filename) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.style.display = "none";
   a.href = url;
-  a.download = "recorded-video.webm";
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
