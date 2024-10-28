@@ -354,7 +354,7 @@ function getNearestBlobByTimestamp(targetTimestamp, cb) {
  * Retrieve all blobs from the indexedDB between two ids
  * @param {number} startId
  * @param {number} endId
- * @param {(blob: Blob) => void} cb
+ * @param {(blobs: Blob[]) => void} cb
  */
 function getUnifiedBlobs(startId, endId, cb) {
   const transaction = db.transaction(["blobs"], "readonly");
@@ -378,22 +378,12 @@ function getUnifiedBlobs(startId, endId, cb) {
     const finalTimeStamp = blobRecords.at(-1).timestamp;
     const startTime = formatTimestamp(initialTimeStamp);
     const endTime = formatTimestamp(finalTimeStamp);
-    const totalTime = formatTime(finalTimeStamp - initialTimeStamp);
+    const totalTime = formatTime((finalTimeStamp - initialTimeStamp) / 1000);
     console.log(`Total time: ${startTime} - ${endTime} (${totalTime})`);
 
     const blobs = blobRecords.map((blobRecord) => blobRecord.blob);
-    unifyBlobs(blobs, cb);
+    cb(blobs);
   });
-}
-
-/**
- * Unify indipendent blobs in a single one
- * @param {Blob[]} blobs
- * @param {(blob: Blob) => void} cb
- */
-function unifyBlobs(blobs, cb) {
-  const blob = new Blob(blobs, { type: mimeType });
-  cb(blob);
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -929,26 +919,6 @@ function getVideoTimelinePercent(e) {
   return percent;
 }
 
-// * save video
-const downloadBtn = document.querySelector(".download-btn");
-downloadBtn.addEventListener("click", saveVideo);
-
-function saveVideo() {
-  getUnifiedBlobs(i - MAXTIME, i + MAXTIME, (blob) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    a.download = "recorded-video.webm";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }, 100);
-  });
-}
-
 // * delete db
 const deleteFormElement = document.querySelector(".delete-all-data-form");
 const deleteInputElement = document.getElementById("deleteAllDataInput");
@@ -968,3 +938,35 @@ deleteFormElement.addEventListener("submit", (e) => {
     alert(`Hai scritto male la parola ${keyWord}, riprova.`);
   }
 });
+
+// * save video
+const downloadBtn = document.querySelector(".download-btn");
+downloadBtn.addEventListener("click", saveVideo);
+
+function saveVideo() {
+  getUnifiedBlobs(i - MAXTIME, i + MAXTIME, (blobs) =>
+    unifyBlobs(blobs, (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = "recorded-video.webm";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    })
+  );
+}
+
+/**
+ * Unify indipendent blobs in a single one
+ * @param {Blob[]} blobs
+ * @param {(blob: Blob) => void} cb
+ */
+function unifyBlobs(blobs, cb) {
+  const blob = new Blob(blobs, { type: mimeType });
+  cb(blob);
+}
