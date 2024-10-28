@@ -179,6 +179,11 @@ function openDbConnection() {
           id: lastId,
           timestamp: formatTimestamp(lastTimestamp),
         });
+        console.log(
+          `Expected total size: ${Math.floor(
+            (lastId * blob.size) / 1024 / 1024
+          )} Mb`
+        );
         startTimestamp = firstTimestamp;
         i = lastId;
       });
@@ -356,7 +361,7 @@ function getNearestBlobByTimestamp(targetTimestamp, cb) {
  * @param {number} endId
  * @param {(blobs: Blob[]) => void} cb
  */
-function getUnifiedBlobs(startId, endId, cb) {
+function getBlobsInRange(startId, endId, cb) {
   const transaction = db.transaction(["blobs"], "readonly");
   const blobStore = transaction.objectStore("blobs");
 
@@ -373,15 +378,51 @@ function getUnifiedBlobs(startId, endId, cb) {
     }
 
     blobRecords.sort((a, b) => a.timestamp - b.timestamp);
-    console.log("Blobs retrieved:", blobRecords.length);
-    const initialTimeStamp = blobRecords[0].timestamp;
-    const finalTimeStamp = blobRecords.at(-1).timestamp;
+
+    const continuosRecords = [];
+    const middlePoint = Math.floor(blobRecords.length / 2);
+    for (let i = middlePoint; i < blobRecords.length; i++) {
+      if (
+        blobRecords[i].timestamp - blobRecords[i - 1].timestamp <=
+        REFRESHRATE * 1.2
+      ) {
+        continuosRecords.push(blobRecords[i]);
+      } else {
+        break;
+      }
+    }
+    for (let i = middlePoint; i > 0; i--) {
+      if (
+        blobRecords[i].timestamp - blobRecords[i - 1].timestamp <=
+        REFRESHRATE * 1.2
+      ) {
+        continuosRecords.push(blobRecords[i]);
+      } else {
+        break;
+      }
+    }
+    continuosRecords.sort((a, b) => a.timestamp - b.timestamp);
+    console.log("Blobs retrieved:", continuosRecords.length);
+
+    const biggestDiff = Math.max(
+      continuosRecords.map((c, i) =>
+        i === 0 ? 0 : c.timestamp - continuosRecords[i - 1].timestamp
+      )
+    );
+    console.log(
+      "Biggest timestamp diff:",
+      biggestDiff,
+      (biggestDiff / REFRESHRATE).toFixed(2)
+    );
+
+    const initialTimeStamp = continuosRecords[0].timestamp;
+    const finalTimeStamp = continuosRecords.at(-1).timestamp;
     const startTime = formatTimestamp(initialTimeStamp);
     const endTime = formatTimestamp(finalTimeStamp);
     const totalTime = formatTime((finalTimeStamp - initialTimeStamp) / 1000);
     console.log(`Total time: ${startTime} - ${endTime} (${totalTime})`);
 
-    const blobs = blobRecords.map((blobRecord) => blobRecord.blob);
+    const blobs = continuosRecords.map((blobRecord) => blobRecord.blob);
     cb(blobs);
   });
 }
@@ -944,7 +985,7 @@ const downloadBtn = document.querySelector(".download-btn");
 downloadBtn.addEventListener("click", saveVideo);
 
 function saveVideo() {
-  getUnifiedBlobs(i - MAXTIME, i + MAXTIME, (blobs) =>
+  getBlobsInRange(i - MAXTIME / 5, i + (MAXTIME * 4) / 5, (blobs) =>
     unifyBlobs(blobs, (blob) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
