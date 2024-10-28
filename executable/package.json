@@ -1,6 +1,6 @@
 {
   "name": "judo-in-cloud-care-system",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Judo in Cloud - CARE System",
   "main": "main.js",
   "scripts": {
