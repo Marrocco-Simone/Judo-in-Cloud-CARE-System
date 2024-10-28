@@ -405,14 +405,14 @@ function getBlobsInRange(startId, endId, cb) {
     console.log("Blobs retrieved:", continuosRecords.length);
 
     const biggestDiff = Math.max(
-      continuosRecords.map((c, i) =>
+      ...continuosRecords.map((c, i) =>
         i === 0 ? 0 : c.timestamp - continuosRecords[i - 1].timestamp
       )
     );
     console.log(
-      "Biggest timestamp diff:",
-      biggestDiff,
-      (biggestDiff / REFRESHRATE).toFixed(2)
+      `Biggest timestamp diff: ${biggestDiff} (ratio ${(
+        biggestDiff / REFRESHRATE
+      ).toFixed(2)})`
     );
 
     const initialTimeStamp = continuosRecords[0].timestamp;
