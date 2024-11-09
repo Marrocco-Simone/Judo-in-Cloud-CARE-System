@@ -867,11 +867,12 @@ video.addEventListener("timeupdate", () => {
 
   const droppedFrames = video.getVideoPlaybackQuality().droppedVideoFrames;
   const totalFrames = video.getVideoPlaybackQuality().totalVideoFrames;
+  const droppedFramesPercentage = (droppedFrames / totalFrames) * 100;
 
-  if (droppedFrames > totalFrames * 0.1) {
+  if (droppedFramesPercentage > 10) {
     // More than 10% frames are being dropped, lower the bitrate
-    const newVideoBitsPerSecond = (videoBitsPerSecond / 1000) * 0.75;
-    const warning = `Stai perdendo troppi frame. Abbassa i "videoBitsPerSecond" sotto a: ${newVideoBitsPerSecond}`;
+    const newVideoBitsPerSecond = videoBitsPerSecond / 1000 / 2;
+    const warning = `Stai perdendo troppi frame (${droppedFramesPercentage}%). Abbassa i "videoBitsPerSecond" sotto a: ${newVideoBitsPerSecond}`;
     console.log(warning);
     const warningElem = document.querySelector(".dropped-frames-warning");
     warningElem.textContent = warning;
