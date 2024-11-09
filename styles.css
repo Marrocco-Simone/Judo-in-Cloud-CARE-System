@@ -21,10 +21,15 @@ body {
   justify-content: center;
   margin-inline: auto;
   background-color: black;
+  overflow: hidden;
 }
 
 video {
+  --zoom: 100%;
+  --y-axis: 0%;
+  --x-axis: 0%;
   width: 100%;
+  transform: scale(var(--zoom)) translate(var(--x-axis), var(--y-axis));
 }
 
 .video-logo {
@@ -450,6 +455,21 @@ video {
 }
 .white-btn:hover {
   background-color: powderblue;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.zoom-btn {
+  font-size: 2.5rem;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.download-btn {
+  margin-left: 3rem;
 }
 
 .white-input {

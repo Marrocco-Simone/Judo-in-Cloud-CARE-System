@@ -1085,3 +1085,56 @@ function downloadBlob(blob, filename) {
     window.URL.revokeObjectURL(url);
   }, 100);
 }
+
+// ! ZOOM COMMANDS
+const zoomVar = "--zoom";
+const yAxisVar = "--y-axis";
+const xAxisVar = "--x-axis";
+
+function getVarLevel(variable) {
+  const value = getComputedStyle(video)
+    .getPropertyValue(variable)
+    .replace("%", "");
+  return parseInt(value);
+}
+const getZoomLevel = () => getVarLevel(zoomVar);
+const getYAxisLevel = () => getVarLevel(yAxisVar);
+const getXAxisLevel = () => getVarLevel(xAxisVar);
+
+function setVarLevel(variable, level) {
+  video.style.setProperty(variable, `${level}%`);
+}
+const setZoomLevel = (level) => setVarLevel(zoomVar, level);
+const setYAxisLevel = (level) => setVarLevel(yAxisVar, level);
+const setXAxisLevel = (level) => setVarLevel(xAxisVar, level);
+
+function increaseVarLevel(variable, increment) {
+  setVarLevel(variable, getVarLevel(variable) + increment);
+}
+const increaseZoomLevel = (sign) => increaseVarLevel(zoomVar, sign * 25);
+const increaseYAxisLevel = (sign) => increaseVarLevel(yAxisVar, sign * 10);
+const increaseXAxisLevel = (sign) => increaseVarLevel(xAxisVar, sign * 5);
+
+function resetZoomAndAxisLevel() {
+  setZoomLevel(100);
+  setYAxisLevel(0);
+  setXAxisLevel(0);
+}
+
+const zoomInBtn = document.querySelector(".zoom-in-btn");
+const zoomOutBtn = document.querySelector(".zoom-out-btn");
+const zoomResetBtn = document.querySelector(".zoom-reset-btn");
+
+const yAxisUpBtn = document.querySelector(".translate-up-btn");
+const yAxisDownBtn = document.querySelector(".translate-down-btn");
+const xAxisLeftBtn = document.querySelector(".translate-left-btn");
+const xAxisRightBtn = document.querySelector(".translate-right-btn");
+
+zoomInBtn.addEventListener("click", () => increaseZoomLevel(1));
+zoomOutBtn.addEventListener("click", () => increaseZoomLevel(-1));
+zoomResetBtn.addEventListener("click", resetZoomAndAxisLevel);
+
+yAxisUpBtn.addEventListener("click", () => increaseYAxisLevel(1));
+yAxisDownBtn.addEventListener("click", () => increaseYAxisLevel(-1));
+xAxisLeftBtn.addEventListener("click", () => increaseXAxisLevel(-1));
+xAxisRightBtn.addEventListener("click", () => increaseXAxisLevel(1));
