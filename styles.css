@@ -523,3 +523,29 @@ video {
   display: flex;
   flex-direction: column;
 }
+
+/* ! scrollbar */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 2rem;
+}
+::-webkit-scrollbar-track {
+  background: white;
+  border-radius: 100vw;
+  margin-block: 0.5rem;
+}
+::-webkit-scrollbar-thumb {
+  background: #0b5e76;
+  border: 0.25rem solid white;
+  border-radius: 100vw;
+}
+::-webkit-scrollbar-thumb:hover {
+  cursor: copy;
+}
+
+/* Firefox */
+@supports (scrollbar-color: red blue) {
+  * {
+    scrollbar-color: #0b5e76 white;
+  }
+}
