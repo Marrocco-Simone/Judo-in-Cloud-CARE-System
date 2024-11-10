@@ -36,9 +36,13 @@ video {
   position: absolute;
   top: 0%;
   right: 10%;
-  width: 7rem;
+  width: 10rem;
   opacity: 0.5;
   pointer-events: none;
+}
+.video-logo svg {
+  stroke: black;
+  stroke-width: 3px;
 }
 
 /* view mode */
