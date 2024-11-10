@@ -1150,8 +1150,31 @@ let lastMouseY = 0;
 
 video.addEventListener("wheel", (e) => {
   e.preventDefault();
+
+  // Get mouse position relative to video
+  const rect = video.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Calculate position percentages
+  const percentX = (mouseX / rect.width) * 100;
+  const percentY = (mouseY / rect.height) * 100;
+
+  // Get current zoom and calculate new zoom
+  const oldZoom = getZoomLevel();
   const zoomSign = e.deltaY > 0 ? -1 : 1;
-  increaseZoomLevel(zoomSign * 25);
+  const zoomDelta = zoomSign * 25;
+  const newZoom = oldZoom + zoomDelta;
+
+  // Calculate position adjustments
+  const scaleChange = (newZoom - oldZoom) / oldZoom;
+  const xAxisDelta = -1 * (percentX - 50) * scaleChange;
+  const yAxisDelta = -1 * (percentY - 50) * scaleChange;
+
+  // Apply zoom and position changes
+  increaseZoomLevel(zoomDelta);
+  increaseXAxisLevel(xAxisDelta);
+  increaseYAxisLevel(yAxisDelta);
 });
 
 video.addEventListener("mousedown", (e) => {
