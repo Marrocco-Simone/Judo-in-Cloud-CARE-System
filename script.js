@@ -723,6 +723,7 @@ const keyMap = {
   ".": () => skipInVideoBuffered(0.1),
   p: () => changePlaybackSpeed(),
   backspace: () => returnLive(),
+  r: () => resetZoomAndAxisLevel(),
 };
 
 document.addEventListener("keydown", (e) => {
@@ -1165,15 +1166,34 @@ video.addEventListener("mousedown", (e) => {
   }
 });
 
+// Add sensitivity controls
+const BASE_MOUSE_SENSITIVITY = 4; // Base sensitivity value
+const MOVEMENT_THRESHOLD = 1;
+
 video.addEventListener("mousemove", (e) => {
   if (isRightMouseDown) {
     // Calculate movement delta
     const deltaX = e.clientX - lastMouseX;
     const deltaY = e.clientY - lastMouseY;
 
-    // Update translation based on mouse movement
-    increaseXAxisLevel(deltaX / 10);
-    increaseYAxisLevel(deltaY / 10);
+    // Only move if delta exceeds threshold
+    if (
+      Math.abs(deltaX) > MOVEMENT_THRESHOLD ||
+      Math.abs(deltaY) > MOVEMENT_THRESHOLD
+    ) {
+      // Calculate zoom-adjusted sensitivity
+      const currentZoom = getZoomLevel();
+      const zoomFactor = currentZoom / 100;
+      const adjustedSensitivity = BASE_MOUSE_SENSITIVITY * zoomFactor;
+
+      // Apply smoothing factor with zoom adjustment
+      const smoothDeltaX = deltaX / adjustedSensitivity;
+      const smoothDeltaY = deltaY / adjustedSensitivity;
+
+      // Update translation with smoothed values
+      increaseXAxisLevel(smoothDeltaX);
+      increaseYAxisLevel(smoothDeltaY);
+    }
 
     // Update last positions
     lastMouseX = e.clientX;
