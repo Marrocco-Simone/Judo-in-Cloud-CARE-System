@@ -1112,9 +1112,12 @@ const setXAxisLevel = (level) => setVarLevel(xAxisVar, level);
 function increaseVarLevel(variable, increment) {
   setVarLevel(variable, getVarLevel(variable) + increment);
 }
-const increaseZoomLevel = (sign) => increaseVarLevel(zoomVar, sign * 25);
-const increaseYAxisLevel = (sign) => increaseVarLevel(yAxisVar, sign * 10);
-const increaseXAxisLevel = (sign) => increaseVarLevel(xAxisVar, sign * 5);
+const increaseZoomLevel = (increment) => {
+  if (increment < 0 && getZoomLevel() + increment <= 50) return;
+  increaseVarLevel(zoomVar, increment);
+};
+const increaseYAxisLevel = (increment) => increaseVarLevel(yAxisVar, increment);
+const increaseXAxisLevel = (increment) => increaseVarLevel(xAxisVar, increment);
 
 function resetZoomAndAxisLevel() {
   setZoomLevel(100);
@@ -1131,11 +1134,68 @@ const yAxisDownBtn = document.querySelector(".translate-down-btn");
 const xAxisLeftBtn = document.querySelector(".translate-left-btn");
 const xAxisRightBtn = document.querySelector(".translate-right-btn");
 
-zoomInBtn.addEventListener("click", () => increaseZoomLevel(1));
-zoomOutBtn.addEventListener("click", () => increaseZoomLevel(-1));
+zoomInBtn.addEventListener("click", () => increaseZoomLevel(25));
+zoomOutBtn.addEventListener("click", () => increaseZoomLevel(-25));
 zoomResetBtn.addEventListener("click", resetZoomAndAxisLevel);
 
-yAxisUpBtn.addEventListener("click", () => increaseYAxisLevel(1));
-yAxisDownBtn.addEventListener("click", () => increaseYAxisLevel(-1));
-xAxisLeftBtn.addEventListener("click", () => increaseXAxisLevel(-1));
-xAxisRightBtn.addEventListener("click", () => increaseXAxisLevel(1));
+yAxisUpBtn.addEventListener("click", () => increaseYAxisLevel(10));
+yAxisDownBtn.addEventListener("click", () => increaseYAxisLevel(-10));
+xAxisLeftBtn.addEventListener("click", () => increaseXAxisLevel(-5));
+xAxisRightBtn.addEventListener("click", () => increaseXAxisLevel(5));
+
+let isRightMouseDown = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+video.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const zoomSign = e.deltaY > 0 ? -1 : 1;
+  increaseZoomLevel(zoomSign * 25);
+});
+
+video.addEventListener("mousedown", (e) => {
+  // Detect right click
+  if (e.button === 2) {
+    e.preventDefault();
+    isRightMouseDown = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    // transform the mouse cursor into a grabbing hand
+    video.style.cursor = "grabbing";
+  }
+});
+
+video.addEventListener("mousemove", (e) => {
+  if (isRightMouseDown) {
+    // Calculate movement delta
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+
+    // Update translation based on mouse movement
+    increaseXAxisLevel(deltaX / 10);
+    increaseYAxisLevel(deltaY / 10);
+
+    // Update last positions
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  }
+});
+
+video.addEventListener("mouseup", (e) => {
+  if (e.button === 2) {
+    isRightMouseDown = false;
+    // transform the mouse cursor back to normal
+    video.style.cursor = "auto";
+  }
+});
+
+video.addEventListener("mouseleave", () => {
+  isRightMouseDown = false;
+  // transform the mouse cursor back to normal
+  video.style.cursor = "auto";
+});
+
+// Disable context menu on video
+video.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+});
