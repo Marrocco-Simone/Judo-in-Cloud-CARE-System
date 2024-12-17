@@ -1144,47 +1144,50 @@ yAxisDownBtn.addEventListener("click", () => increaseYAxisLevel(-10));
 xAxisLeftBtn.addEventListener("click", () => increaseXAxisLevel(-5));
 xAxisRightBtn.addEventListener("click", () => increaseXAxisLevel(5));
 
+/** Decide if possible to use mouse for zoom and movement @type {HTMLInputElement} */
+const mouseZoomCheckbox = document.querySelector(".mouse-zoom-checkbox");
+
 let isRightMouseDown = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
 video.addEventListener("wheel", (e) => {
-  e.preventDefault();
+  if (mouseZoomCheckbox.checked) {
+    e.preventDefault();
 
-  // Get mouse position relative to video
-  const rect = video.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
+    // Get mouse position relative to video
+    const rect = video.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-  // Calculate position percentages
-  const percentX = (mouseX / rect.width) * 100;
-  const percentY = (mouseY / rect.height) * 100;
+    // Calculate position percentages
+    const percentX = (mouseX / rect.width) * 100;
+    const percentY = (mouseY / rect.height) * 100;
 
-  // Get current zoom and calculate new zoom
-  const oldZoom = getZoomLevel();
-  const zoomSign = e.deltaY > 0 ? -1 : 1;
-  const zoomDelta = zoomSign * 25;
-  const newZoom = oldZoom + zoomDelta;
+    // Get current zoom and calculate new zoom
+    const oldZoom = getZoomLevel();
+    const zoomSign = e.deltaY > 0 ? -1 : 1;
+    const zoomDelta = zoomSign * 25;
+    const newZoom = oldZoom + zoomDelta;
 
-  // Calculate position adjustments
-  const scaleChange = (newZoom - oldZoom) / oldZoom;
-  const xAxisDelta = -1 * (percentX - 50) * scaleChange;
-  const yAxisDelta = -1 * (percentY - 50) * scaleChange;
+    // Calculate position adjustments
+    const scaleChange = (newZoom - oldZoom) / oldZoom;
+    const xAxisDelta = -1 * (percentX - 50) * scaleChange;
+    const yAxisDelta = -1 * (percentY - 50) * scaleChange;
 
-  // Apply zoom and position changes
-  increaseZoomLevel(zoomDelta);
-  increaseXAxisLevel(xAxisDelta);
-  increaseYAxisLevel(yAxisDelta);
+    // Apply zoom and position changes
+    increaseZoomLevel(zoomDelta);
+    increaseXAxisLevel(xAxisDelta);
+    increaseYAxisLevel(yAxisDelta);
+  }
 });
 
 video.addEventListener("mousedown", (e) => {
-  // Detect right click
-  if (e.button === 2) {
+  if (mouseZoomCheckbox.checked && e.button === 2) {
     e.preventDefault();
     isRightMouseDown = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
-    // transform the mouse cursor into a grabbing hand
     video.style.cursor = "grabbing";
   }
 });
@@ -1194,51 +1197,44 @@ const BASE_MOUSE_SENSITIVITY = 4; // Base sensitivity value
 const MOVEMENT_THRESHOLD = 1;
 
 video.addEventListener("mousemove", (e) => {
-  if (isRightMouseDown) {
-    // Calculate movement delta
+  if (mouseZoomCheckbox.checked && isRightMouseDown) {
     const deltaX = e.clientX - lastMouseX;
     const deltaY = e.clientY - lastMouseY;
 
-    // Only move if delta exceeds threshold
     if (
       Math.abs(deltaX) > MOVEMENT_THRESHOLD ||
       Math.abs(deltaY) > MOVEMENT_THRESHOLD
     ) {
-      // Calculate zoom-adjusted sensitivity
       const currentZoom = getZoomLevel();
       const zoomFactor = currentZoom / 100;
       const adjustedSensitivity = BASE_MOUSE_SENSITIVITY * zoomFactor;
 
-      // Apply smoothing factor with zoom adjustment
       const smoothDeltaX = deltaX / adjustedSensitivity;
       const smoothDeltaY = deltaY / adjustedSensitivity;
 
-      // Update translation with smoothed values
       increaseXAxisLevel(smoothDeltaX);
       increaseYAxisLevel(smoothDeltaY);
     }
 
-    // Update last positions
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
   }
 });
 
 video.addEventListener("mouseup", (e) => {
-  if (e.button === 2) {
+  if (mouseZoomCheckbox.checked && e.button === 2) {
     isRightMouseDown = false;
-    // transform the mouse cursor back to normal
     video.style.cursor = "auto";
   }
 });
 
 video.addEventListener("mouseleave", () => {
-  isRightMouseDown = false;
-  // transform the mouse cursor back to normal
-  video.style.cursor = "auto";
+  if (mouseZoomCheckbox.checked) {
+    isRightMouseDown = false;
+    video.style.cursor = "auto";
+  }
 });
 
-// Disable context menu on video
 video.addEventListener("contextmenu", (e) => {
   e.preventDefault();
 });
