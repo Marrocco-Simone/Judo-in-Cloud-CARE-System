@@ -1212,8 +1212,11 @@ video.addEventListener("mousemove", (e) => {
       const smoothDeltaX = deltaX / adjustedSensitivity;
       const smoothDeltaY = deltaY / adjustedSensitivity;
 
-      increaseXAxisLevel(smoothDeltaX);
-      increaseYAxisLevel(smoothDeltaY);
+      if (Math.abs(smoothDeltaX) > Math.abs(smoothDeltaY)) {
+        increaseXAxisLevel(smoothDeltaX);
+      } else {
+        increaseYAxisLevel(smoothDeltaY);
+      }
     }
 
     lastMouseX = e.clientX;
