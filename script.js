@@ -170,6 +170,7 @@ function openDbConnection() {
   });
   request.addEventListener("error", (e) => {
     console.error("Error opening database:", e.target.errorCode);
+    console.error(e);
   });
   request.addEventListener("success", (e) => {
     db = e.target.result;
