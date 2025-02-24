@@ -498,6 +498,58 @@ video {
   width: 50%;
 }
 
+.white-slider {
+  /* Basic slider styling */
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0.5rem;
+  width: 50%;
+  height: 0.5rem;
+  background: white;
+  border: 1px solid #0b5e76;
+  border-radius: 0.25rem;
+
+  /* Thumb styling */
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: #0b5e76;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 150ms;
+  }
+
+  &::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: #0b5e76;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 150ms;
+  }
+
+  /* Hover states */
+  &:hover::-webkit-slider-thumb {
+    background: powderblue;
+  }
+
+  &:hover::-moz-range-thumb {
+    background: powderblue;
+  }
+
+  /* Track styling */
+  &::-webkit-slider-runnable-track {
+    background: transparent;
+  }
+
+  &::-moz-range-track {
+    background: transparent;
+  }
+}
+
 .dropped-frames-warning {
   background-color: red;
   color: black;

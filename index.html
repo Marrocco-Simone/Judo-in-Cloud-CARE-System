@@ -467,33 +467,14 @@
             <button id="resetButton" type="button">Reset</button>
           </div>
           <label>
-            <p>Qualita video</p>
+            <p>Bitrate [<span id="videoBitsInputValue"></span>]</p>
             <input
               id="videoBitsInput"
-              class="white-input"
-              type="number"
+              class="white-slider"
+              type="range"
               min="0"
+              max="3000"
               step="500"
-            />
-          </label>
-          <label>
-            <p>Refresh rate</p>
-            <input
-              id="refreshRateInput"
-              class="white-input"
-              type="number"
-              min="0"
-              step="0.25"
-            />
-          </label>
-          <label>
-            <p>Moltiplicatore ritardo</p>
-            <input
-              id="delayMultiplierInput"
-              class="white-input"
-              type="number"
-              min="0"
-              step="1"
             />
           </label>
           <label>
@@ -501,12 +482,39 @@
             <input id="useAudioInput" type="checkbox" />
           </label>
           <label>
-            <p>Log database operations</p>
-            <input id="logDatabaseOpInput" type="checkbox" />
+            <p>Frame size [<span id="refreshRateInputValue"></span>]</p>
+            <input
+              id="refreshRateInput"
+              class="white-slider"
+              type="range"
+              min="0.25"
+              max="2"
+              step="0.25"
+            />
           </label>
           <label>
             <p>More video info</p>
             <input id="showMoreVideoInfoInput" type="checkbox" />
+          </label>
+          <label>
+            <p>
+              Moltiplicatore ritardo [<span
+                id="delayMultiplierInputValue"
+              ></span
+              >]
+            </p>
+            <input
+              id="delayMultiplierInput"
+              class="white-slider"
+              type="range"
+              min="0"
+              max="3"
+              step="1"
+            />
+          </label>
+          <label>
+            <p>Log database operations</p>
+            <input id="logDatabaseOpInput" type="checkbox" />
           </label>
         </form>
 

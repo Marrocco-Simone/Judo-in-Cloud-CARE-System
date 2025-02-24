@@ -32,14 +32,36 @@ console.log("params: ", {
 /** @type {HTMLInputElement} */
 const videoBitsInput = document.getElementById("videoBitsInput");
 videoBitsInput.value = videoBitsPerSecond / 1000;
+const showVideoBitsInputSize = (value) =>
+  (document.getElementById(
+    "videoBitsInputValue"
+  ).textContent = `${value} kbps`);
+videoBitsInput.addEventListener("input", (e) =>
+  showVideoBitsInputSize(e.target.value)
+);
+showVideoBitsInputSize(videoBitsPerSecond / 1000);
 
 /** @type {HTMLInputElement} */
 const refreshRateInput = document.getElementById("refreshRateInput");
 refreshRateInput.value = REFRESHRATE / 1000;
+const showRefreshRateInputSize = (value) =>
+  (document.getElementById("refreshRateInputValue").textContent = `${value}s`);
+refreshRateInput.addEventListener("input", (e) =>
+  showRefreshRateInputSize(e.target.value)
+);
+showRefreshRateInputSize(REFRESHRATE / 1000);
 
 /** @type {HTMLInputElement} */
 const delayMultiplierInput = document.getElementById("delayMultiplierInput");
 delayMultiplierInput.value = DELAY_MULTIPLIER;
+const showDelayMultiplierInputSize = (value) =>
+  (document.getElementById(
+    "delayMultiplierInputValue"
+  ).textContent = `${value}`);
+delayMultiplierInput.addEventListener("input", (e) =>
+  showDelayMultiplierInputSize(e.target.value)
+);
+showDelayMultiplierInputSize(DELAY_MULTIPLIER);
 
 /** @type {HTMLInputElement} */
 const useAudioInput = document.getElementById("useAudioInput");
