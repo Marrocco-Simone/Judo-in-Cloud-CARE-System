@@ -163,7 +163,7 @@ let currentTimestamp = 0;
 const dbName = "blobStoreDB";
 const dbVersion = 1;
 const streamCollectionName = "streamBlobs";
-const downloadCollectionName = "downloadBlobs";
+// const downloadCollectionName = "downloadBlobs";
 /** @type {IDBDatabase} */
 let db;
 
@@ -182,13 +182,13 @@ function openDbConnection() {
       blobStore.createIndex("timestamp", "timestamp", { unique: false });
     }
 
-    if (!db.objectStoreNames.contains(downloadCollectionName)) {
-      const downloadStore = db.createObjectStore(downloadCollectionName, {
-        keyPath: "id",
-        autoIncrement: true,
-      });
-      downloadStore.createIndex("timestamp", "timestamp", { unique: false });
-    }
+    // if (!db.objectStoreNames.contains(downloadCollectionName)) {
+    //   const downloadStore = db.createObjectStore(downloadCollectionName, {
+    //     keyPath: "id",
+    //     autoIncrement: true,
+    //   });
+    //   downloadStore.createIndex("timestamp", "timestamp", { unique: false });
+    // }
   });
   request.addEventListener("error", (e) => {
     console.error("Error opening database:", e.target.errorCode);
@@ -607,12 +607,12 @@ function moveToTimestamp(timestamp) {
 // * RETRIVAL OF THE WEBCAM STREAM
 
 /** The duration of the video to download in milliseconds */
-const DOWNLOAD_DURATION = MAXTIME * 1000;
+// const DOWNLOAD_DURATION = MAXTIME * 1000;
 
 /** @type {MediaRecorder} */
 let streamMediaRecorder;
-/** @type {MediaRecorder} */
-let downloadMediaRecorder;
+// /** @type {MediaRecorder} */
+// let downloadMediaRecorder;
 
 let videoTrackLabel;
 getWebcamStream();
@@ -659,11 +659,11 @@ function getWebcamStream() {
         REFRESHRATE,
         streamCollectionName
       );
-      downloadMediaRecorder = createMediaRecorder(
-        mediaStream,
-        DOWNLOAD_DURATION,
-        downloadCollectionName
-      );
+      // downloadMediaRecorder = createMediaRecorder(
+      //   mediaStream,
+      //   DOWNLOAD_DURATION,
+      //   downloadCollectionName
+      // );
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
     .catch((err) => {
@@ -1071,55 +1071,55 @@ deleteFormElement.addEventListener("submit", (e) => {
 });
 
 // * save video
-const downloadBtn = document.querySelector(".download-btn");
-downloadBtn.addEventListener("click", saveVideo);
+// const downloadBtn = document.querySelector(".download-btn");
+// downloadBtn.addEventListener("click", saveVideo);
 
-function saveVideo() {
-  getNearestBlobByTimestamp(
-    currentTimestamp + DOWNLOAD_DURATION,
-    downloadCollectionName,
-    (blob, timestamp, id) => {
-      const initialTime = timestamp - DOWNLOAD_DURATION;
-      const finalTime = timestamp;
-      if (currentTimestamp > finalTime) {
-        alert(
-          "Il pezzo attuale sta ancora venendo registrato. Aspetta un paio di minuti."
-        );
-        return;
-      }
-      if (currentTimestamp < initialTime) {
-        // ? it should not happen
-        alert(
-          "C'è stato un errore. Questo pezzo di video non è disponibile per il download."
-        );
-        return;
-      }
-      const filename = `video_${formatTimestamp(initialTime)}_${formatTimestamp(
-        finalTime
-      )}.webm`;
+// function saveVideo() {
+//   getNearestBlobByTimestamp(
+//     currentTimestamp + DOWNLOAD_DURATION,
+//     downloadCollectionName,
+//     (blob, timestamp, id) => {
+//       const initialTime = timestamp - DOWNLOAD_DURATION;
+//       const finalTime = timestamp;
+//       if (currentTimestamp > finalTime) {
+//         alert(
+//           "Il pezzo attuale sta ancora venendo registrato. Aspetta un paio di minuti."
+//         );
+//         return;
+//       }
+//       if (currentTimestamp < initialTime) {
+//         // ? it should not happen
+//         alert(
+//           "C'è stato un errore. Questo pezzo di video non è disponibile per il download."
+//         );
+//         return;
+//       }
+//       const filename = `video_${formatTimestamp(initialTime)}_${formatTimestamp(
+//         finalTime
+//       )}.webm`;
 
-      downloadBlob(blob, filename);
-    }
-  );
-}
+//       downloadBlob(blob, filename);
+//     }
+//   );
+// }
 
-/**
- * Given a blob, download it as a file
- * @param {Blob} blob
- */
-function downloadBlob(blob, filename) {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.style.display = "none";
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  }, 100);
-}
+// /**
+//  * Given a blob, download it as a file
+//  * @param {Blob} blob
+//  */
+// function downloadBlob(blob, filename) {
+//   const url = window.URL.createObjectURL(blob);
+//   const a = document.createElement("a");
+//   a.style.display = "none";
+//   a.href = url;
+//   a.download = filename;
+//   document.body.appendChild(a);
+//   a.click();
+//   setTimeout(() => {
+//     document.body.removeChild(a);
+//     window.URL.revokeObjectURL(url);
+//   }, 100);
+// }
 
 // ! ZOOM COMMANDS
 const zoomVar = "--zoom";
