@@ -100,6 +100,12 @@ function setNewQueryParams(e) {
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
 
+  const cameraSelect = document.querySelector(
+    `input[name=camera-select]:checked`
+  );
+  const deviceId = cameraSelect.value;
+  newParams.set("deviceId", deviceId);
+
   window.location.search = newParams.toString();
 }
 
@@ -144,9 +150,7 @@ const timelineContainer = document.querySelector(".timeline-container");
 const video = document.querySelector("video");
 const timestampIndicator = document.querySelector(".timestamp-indicator");
 /** @type {HTMLSelectElement} */
-const cameraSelect = document.querySelector(".camera-select");
-/** @type {HTMLFormElement} */
-const cameraSelectForm = document.querySelector(".camera-select-form");
+const cameraSelectDiv = document.querySelector(".camera-select-div");
 
 /** recording starting timestamp */
 let startTimestamp = 0;
@@ -669,7 +673,7 @@ function getWebcamStream() {
     .catch((err) => {
       console.error(err);
       alert(
-        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).`
+        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).\n\nErrore: ${err.message}`
       );
     });
 }
@@ -720,20 +724,26 @@ function listAllCameraDevices() {
   navigator.mediaDevices.enumerateDevices().then((devices) => {
     const filtered_devices = devices.filter((d) => d.kind === "videoinput");
 
+    cameraSelectDiv.querySelector("p.camera-select-placeholder")?.remove();
+
     filtered_devices.forEach((device) => {
-      const newOption = document.createElement("option");
-      newOption.value = device.deviceId;
-      newOption.text = device.label;
-      cameraSelect.appendChild(newOption);
-    });
-    cameraSelect.selectedIndex =
-      filtered_devices.findIndex((d) => d.label === videoTrackLabel) + 1;
-    cameraSelectForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const newParams = new URLSearchParams(window.location.search);
-      const deviceId = cameraSelect.value;
-      newParams.set("deviceId", deviceId);
-      window.location.search = newParams.toString();
+      const label = document.createElement("label");
+      label.className = "camera-select-radio-label";
+
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "camera-select";
+      radio.value = device.deviceId;
+      radio.className = "camera-radio-input";
+      if (device.label === videoTrackLabel) {
+        radio.checked = true;
+      }
+
+      const labelText = document.createTextNode(device.label);
+
+      label.appendChild(radio);
+      label.appendChild(labelText);
+      cameraSelectDiv.appendChild(label);
     });
   });
 }

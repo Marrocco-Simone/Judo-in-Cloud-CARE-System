@@ -135,35 +135,6 @@
       </header>
 
       <main class="jic-main">
-        <!-- ! SELECT CAMERA -->
-        <div class="top-bar">
-          <form class="camera-select-form">
-            <select class="camera-select white-btn">
-              <option value="">Scegli telecamera</option>
-            </select>
-            <button type="submit" class="camera-select-btn white-btn">
-              Cambia
-            </button>
-          </form>
-          <label class="mouse-zoom-checkbox-label">
-            <em>Abilita zoom con mouse</em>
-            <input
-              type="checkbox"
-              id="mouse-zoom-checkbox"
-              class="mouse-zoom-checkbox"
-            />
-          </label>
-          <div class="action-buttons">
-            <button class="white-btn zoom-reset-btn">reset</button>
-            <button class="white-btn zoom-btn zoom-in-btn">+</button>
-            <button class="white-btn zoom-btn zoom-out-btn">-</button>
-            <button class="white-btn zoom-btn translate-up-btn">🡩</button>
-            <button class="white-btn zoom-btn translate-down-btn">🡫</button>
-            <button class="white-btn zoom-btn translate-right-btn">🡨</button>
-            <button class="white-btn zoom-btn translate-left-btn">🡪</button>
-          </div>
-          <!-- <button class="white-btn download-btn">Download</button> -->
-        </div>
         <p class="dropped-frames-warning hidden">This is the warning</p>
         <!-- ! VIDEO PLAYER -->
         <div class="video-container paused theater" data-volume-level="muted">
@@ -355,6 +326,28 @@
           </div>
         </div>
 
+        <!-- ! ZOOM CONTROL -->
+        <div class="zoom-control-bar">
+          <label class="mouse-zoom-checkbox-label">
+            <em>Abilita zoom con mouse</em>
+            <input
+              type="checkbox"
+              id="mouse-zoom-checkbox"
+              class="mouse-zoom-checkbox"
+            />
+          </label>
+          <div class="action-buttons">
+            <button class="white-btn zoom-reset-btn">reset</button>
+            <button class="white-btn zoom-btn zoom-in-btn">+</button>
+            <button class="white-btn zoom-btn zoom-out-btn">-</button>
+            <button class="white-btn zoom-btn translate-up-btn">🡩</button>
+            <button class="white-btn zoom-btn translate-down-btn">🡫</button>
+            <button class="white-btn zoom-btn translate-right-btn">🡨</button>
+            <button class="white-btn zoom-btn translate-left-btn">🡪</button>
+          </div>
+          <!-- <button class="white-btn download-btn">Download</button> -->
+        </div>
+
         <!-- ! INSTRUCTIONS -->
         <div class="instruction-container">
           <div class="instruction-text">
@@ -466,13 +459,18 @@
             <button id="submitButton" type="submit">Conferma</button>
             <button id="resetButton" type="button">Reset</button>
           </div>
+          <div class="camera-select-div">
+            <h4>Cameras</h4>
+            <p class="camera-select-placeholder">Loading cameras...</p>
+          </div>
+          <hr />
           <label>
             <p>Bitrate [<span id="videoBitsInputValue"></span>]</p>
             <input
               id="videoBitsInput"
               class="white-slider"
               type="range"
-              min="0"
+              min="500"
               max="3000"
               step="500"
             />
