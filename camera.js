@@ -167,7 +167,6 @@ let currentTimestamp = 0;
 const dbName = "blobStoreDB";
 const dbVersion = 1;
 const streamCollectionName = "streamBlobs";
-// const downloadCollectionName = "downloadBlobs";
 /** @type {IDBDatabase} */
 let db;
 
@@ -186,13 +185,6 @@ function openDbConnection() {
       blobStore.createIndex("timestamp", "timestamp", { unique: false });
     }
 
-    // if (!db.objectStoreNames.contains(downloadCollectionName)) {
-    //   const downloadStore = db.createObjectStore(downloadCollectionName, {
-    //     keyPath: "id",
-    //     autoIncrement: true,
-    //   });
-    //   downloadStore.createIndex("timestamp", "timestamp", { unique: false });
-    // }
   });
   request.addEventListener("error", (e) => {
     console.error("Error opening database:", e.target.errorCode);
@@ -419,6 +411,7 @@ function getBlobsInRange(startId, endId, collectionName, cb) {
     const blobRecords = e.target.result;
     if (!blobRecords.length) {
       console.error(`No blobs found in range ${startId}-${endId}.`);
+      cb([]);
       return;
     }
 
@@ -610,13 +603,8 @@ function moveToTimestamp(timestamp) {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * RETRIVAL OF THE WEBCAM STREAM
 
-/** The duration of the video to download in milliseconds */
-// const DOWNLOAD_DURATION = MAXTIME * 1000;
-
 /** @type {MediaRecorder} */
 let streamMediaRecorder;
-// /** @type {MediaRecorder} */
-// let downloadMediaRecorder;
 
 let videoTrackLabel;
 getWebcamStream();
@@ -663,11 +651,6 @@ function getWebcamStream() {
         REFRESHRATE,
         streamCollectionName
       );
-      // downloadMediaRecorder = createMediaRecorder(
-      //   mediaStream,
-      //   DOWNLOAD_DURATION,
-      //   downloadCollectionName
-      // );
       setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
     })
     .catch((err) => {
@@ -1081,55 +1064,155 @@ deleteFormElement.addEventListener("submit", (e) => {
 });
 
 // * save video
-// const downloadBtn = document.querySelector(".download-btn");
-// downloadBtn.addEventListener("click", saveVideo);
+const downloadBtn = document.querySelector(".download-btn");
+const downloadProgress = document.querySelector(".download-progress");
+downloadBtn.addEventListener("click", saveVideo);
 
-// function saveVideo() {
-//   getNearestBlobByTimestamp(
-//     currentTimestamp + DOWNLOAD_DURATION,
-//     downloadCollectionName,
-//     (blob, timestamp, id) => {
-//       const initialTime = timestamp - DOWNLOAD_DURATION;
-//       const finalTime = timestamp;
-//       if (currentTimestamp > finalTime) {
-//         alert(
-//           "Il pezzo attuale sta ancora venendo registrato. Aspetta un paio di minuti."
-//         );
-//         return;
-//       }
-//       if (currentTimestamp < initialTime) {
-//         // ? it should not happen
-//         alert(
-//           "C'è stato un errore. Questo pezzo di video non è disponibile per il download."
-//         );
-//         return;
-//       }
-//       const filename = `video_${formatTimestamp(initialTime)}_${formatTimestamp(
-//         finalTime
-//       )}.webm`;
+function setDownloadProgress(text) {
+  if (text) {
+    downloadProgress.textContent = text;
+    downloadProgress.classList.remove("hidden");
+    downloadBtn.disabled = true;
+  } else {
+    downloadProgress.classList.add("hidden");
+    downloadBtn.disabled = false;
+  }
+}
 
-//       downloadBlob(blob, filename);
-//     }
-//   );
-// }
+function saveVideo() {
+  if (!startTimestamp || !lastTimestamp) {
+    alert("Nessun video registrato.");
+    return;
+  }
 
-// /**
-//  * Given a blob, download it as a file
-//  * @param {Blob} blob
-//  */
-// function downloadBlob(blob, filename) {
-//   const url = window.URL.createObjectURL(blob);
-//   const a = document.createElement("a");
-//   a.style.display = "none";
-//   a.href = url;
-//   a.download = filename;
-//   document.body.appendChild(a);
-//   a.click();
-//   setTimeout(() => {
-//     document.body.removeChild(a);
-//     window.URL.revokeObjectURL(url);
-//   }, 100);
-// }
+  setDownloadProgress("Raccolta blob...");
+
+  getNearestBlobByTimestamp(startTimestamp, streamCollectionName, (blob, ts, startId) => {
+    getNearestBlobByTimestamp(lastTimestamp, streamCollectionName, (blob2, ts2, endId) => {
+      getBlobsInRange(startId, endId, streamCollectionName, (blobs) => {
+        if (!blobs || !blobs.length) {
+          alert("Nessun blob trovato per il download.");
+          setDownloadProgress(null);
+          return;
+        }
+
+        const filename = `video_${formatTimestamp(startTimestamp).replaceAll(":", "-")}_${formatTimestamp(lastTimestamp).replaceAll(":", "-")}.mp4`;
+        setDownloadProgress(`Conversione 0/${blobs.length}...`);
+
+        convertBlobsToMp4(blobs, filename).catch((err) => {
+          console.error("Errore conversione MP4, fallback WebM:", err);
+          setDownloadProgress("Fallback WebM...");
+          const webmBlob = new Blob(blobs, { type: mimeType });
+          const webmFilename = filename.replace(".mp4", ".webm");
+          triggerDownload(webmBlob, webmFilename);
+          setDownloadProgress(null);
+        });
+      });
+    });
+  });
+}
+
+/**
+ * Convert an array of WebM blobs into a single MP4 file using MediaBunny
+ * @param {Blob[]} blobs
+ * @param {string} filename
+ */
+async function convertBlobsToMp4(blobs, filename) {
+  const {
+    Input, Output, BlobSource, BufferTarget,
+    Mp4OutputFormat, ALL_FORMATS, EncodedPacketSink,
+    EncodedVideoPacketSource, EncodedAudioPacketSource,
+  } = Mediabunny;
+
+  const target = new BufferTarget();
+  const output = new Output({
+    format: new Mp4OutputFormat(),
+    target,
+  });
+
+  const firstInput = new Input({ formats: ALL_FORMATS, source: new BlobSource(blobs[0]) });
+  const firstVideoTrack = await firstInput.getPrimaryVideoTrack();
+  const firstAudioTrack = await firstInput.getPrimaryAudioTrack();
+
+  if (!firstVideoTrack) {
+    throw new Error("Nessuna traccia video trovata nel primo blob");
+  }
+
+  const videoSource = new EncodedVideoPacketSource(firstVideoTrack.codec);
+  output.addVideoTrack(videoSource);
+
+  let audioSource = null;
+  if (firstAudioTrack) {
+    audioSource = new EncodedAudioPacketSource(firstAudioTrack.codec);
+    output.addAudioTrack(audioSource);
+  }
+
+  await output.start();
+
+  let videoTimeOffset = 0;
+  let audioTimeOffset = 0;
+
+  for (let idx = 0; idx < blobs.length; idx++) {
+    setDownloadProgress(`Conversione ${idx + 1}/${blobs.length}...`);
+
+    const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(blobs[idx]) });
+    const videoTrack = await input.getPrimaryVideoTrack();
+
+    if (videoTrack) {
+      const videoSink = new EncodedPacketSink(videoTrack);
+      for await (const packet of videoSink.packets()) {
+        await videoSource.add({
+          ...packet,
+          timestamp: packet.timestamp + videoTimeOffset,
+        });
+      }
+      videoTimeOffset += await videoTrack.computeDuration();
+    }
+
+    if (audioSource) {
+      const audioTrack = await input.getPrimaryAudioTrack();
+      if (audioTrack) {
+        const audioSink = new EncodedPacketSink(audioTrack);
+        for await (const packet of audioSink.packets()) {
+          await audioSource.add({
+            ...packet,
+            timestamp: packet.timestamp + audioTimeOffset,
+          });
+        }
+        audioTimeOffset += await audioTrack.computeDuration();
+      }
+    }
+  }
+
+  videoSource.close();
+  if (audioSource) audioSource.close();
+
+  setDownloadProgress("Finalizzazione...");
+  await output.finalize();
+
+  const mp4Blob = new Blob([target.buffer], { type: "video/mp4" });
+  triggerDownload(mp4Blob, filename);
+  setDownloadProgress(null);
+}
+
+/**
+ * Trigger a browser download for a blob
+ * @param {Blob} blob
+ * @param {string} filename
+ */
+function triggerDownload(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, 100);
+}
 
 // ! ZOOM COMMANDS
 const zoomVar = "--zoom";
