@@ -333,7 +333,7 @@ function getBlobById(id, collectionName, cb, errorCb) {
   const request = blobStore.get(id);
   request.addEventListener("error", (e) => {
     console.error("Error retrieving blob:", e.target.errorCode);
-    errorCb();
+    if (errorCb) errorCb();
   });
   request.addEventListener("success", (e) => {
     /** @type {{blob: Blob, timestamp: number, id: number}} */
@@ -352,7 +352,7 @@ function getBlobById(id, collectionName, cb, errorCb) {
       if (logDatabaseOp) {
         console.error(`Blob ${id} not found.`);
       }
-      errorCb();
+      if (errorCb) errorCb();
     }
   });
 }
@@ -545,6 +545,47 @@ function checkSourceBufferAviability() {
   return true;
 }
 
+const READAHEAD_SIZE = 3;
+const blobCache = new Map();
+
+function prefetchBlobs(startId) {
+  for (let j = startId; j < startId + READAHEAD_SIZE; j++) {
+    if (blobCache.has(j)) continue;
+    getBlobById(j, streamCollectionName, (blob, timestamp) => {
+      blobCache.set(j, { blob, timestamp });
+    });
+  }
+}
+
+function invalidateBlobCache() {
+  blobCache.clear();
+}
+
+function processBlob(blob, timestamp) {
+  clearSourceBufferLength();
+  blob
+    .arrayBuffer()
+    .then((arrayBuffer) => {
+      if (!checkSourceBufferAviability()) {
+        waitBeforeNextAppendToSourceBuffer();
+        return;
+      }
+
+      if (blob.type !== mimeType) {
+        throw new Error(
+          `Blob type is not "${mimeType}" but "${blob.type}"`
+        );
+      }
+      sourceBuffer.appendBuffer(arrayBuffer);
+      i++;
+      currentTimestamp = timestamp;
+      updateTotalTimeOnVideo();
+    })
+    .catch((e) =>
+      console.error("Error appending blob to sourceBuffer:", e)
+    );
+}
+
 /** add to the sourceBuffer the new segment */
 function appendToSourceBuffer() {
   if (!checkSourceBufferAviability()) return;
@@ -553,38 +594,27 @@ function appendToSourceBuffer() {
     return;
   }
 
+  const cached = blobCache.get(i);
+  if (cached) {
+    blobCache.delete(i);
+    processBlob(cached.blob, cached.timestamp);
+    prefetchBlobs(i + 1);
+    return;
+  }
+
   getBlobById(
     i,
     streamCollectionName,
     (blob, timestamp) => {
-      clearSourceBufferLength();
-      blob
-        .arrayBuffer()
-        .then((arrayBuffer) => {
-          if (!checkSourceBufferAviability()) {
-            waitBeforeNextAppendToSourceBuffer();
-            return;
-          }
-
-          if (blob.type !== mimeType) {
-            throw new Error(
-              `Blob type is not "${mimeType}" but "${blob.type}"`
-            );
-          }
-          sourceBuffer.appendBuffer(arrayBuffer);
-          i++;
-          currentTimestamp = timestamp;
-          updateTotalTimeOnVideo();
-        })
-        .catch((e) =>
-          console.error("Error appending blob to sourceBuffer:", e)
-        );
+      processBlob(blob, timestamp);
+      prefetchBlobs(i + 1);
     },
     waitBeforeNextAppendToSourceBuffer
   );
 }
 
 function moveToTimestamp(timestamp) {
+  invalidateBlobCache();
   if (timestamp > lastTimestamp) return returnLive();
   if (timestamp < startTimestamp) timestamp = startTimestamp;
 
@@ -878,7 +908,14 @@ function updateCurrentTime() {
   currentTimeElem.textContent = s;
 }
 
+let lastTimeupdateAt = 0;
+let lastQualityCheckAt = 0;
 video.addEventListener("timeupdate", () => {
+  const now = performance.now();
+
+  if (now - lastTimeupdateAt < 500) return;
+  lastTimeupdateAt = now;
+
   updateCurrentTime();
   const newCurrentTime = getCurrentTime();
   const newTotalTime = getVideoDuration();
@@ -892,12 +929,14 @@ video.addEventListener("timeupdate", () => {
   const liveDotColor = percent > 0.95 ? "red" : "#bbb";
   liveDotElem.style.setProperty("background-color", liveDotColor);
 
-  const droppedFrames = video.getVideoPlaybackQuality().droppedVideoFrames;
-  const totalFrames = video.getVideoPlaybackQuality().totalVideoFrames;
-  const droppedFramesPercentage = (droppedFrames / totalFrames) * 100;
+  if (now - lastQualityCheckAt < 3000) return;
+  lastQualityCheckAt = now;
+
+  const quality = video.getVideoPlaybackQuality();
+  const droppedFramesPercentage =
+    (quality.droppedVideoFrames / quality.totalVideoFrames) * 100;
 
   if (droppedFramesPercentage > 10) {
-    // More than 10% frames are being dropped, lower the bitrate
     const newVideoBitsPerSecond = videoBitsPerSecond / 1000 / 2;
     const warning = `Stai perdendo troppi frame (${droppedFramesPercentage}%). Abbassa i "videoBitsPerSecond" sotto a: ${newVideoBitsPerSecond}`;
     console.log(warning);
