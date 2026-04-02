@@ -520,6 +520,21 @@ video {
   aspect-ratio: 1 / 1;
 }
 
+.download-btn {
+  margin-left: 1rem;
+}
+
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.download-progress {
+  margin-left: 0.5rem;
+  color: #0b5e76;
+  font-size: 0.9rem;
+}
+
 .white-input {
   padding: 0.5rem;
   border: 1px solid #0b5e76;
