@@ -14,32 +14,35 @@ Language: Italian (UI text and comments are in Italian).
 
 This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no framework, no TypeScript.
 
-### Core Files
+### Two-Page Structure
 
-- `index.html` — Single-page app with the video player UI, settings form, and instructional content
-- `script.js` — All application logic (~1245 lines): webcam capture, IndexedDB storage, MediaSource video playback, keyboard/mouse controls, zoom/pan, download
+- `index.html` + `index.js` — Landing page with settings form, camera device selection, and instructional content. Settings are passed as URL query params when navigating to the camera page.
+- `camera.html` + `camera.js` (~1400 lines) — The main camera application: webcam capture, IndexedDB storage, MediaSource video playback, keyboard/mouse controls, zoom/pan, download.
 - `styles.css` — Video player styling, controls, forms, timeline, zoom
 - `jic_styles.css` — Shared Judo in Cloud brand styles (header, footer) ported from Tailwind
+- `mediabunny.min.js` — Third-party library for converting WebM blobs to MP4 for download
 
-### Key Concepts in `script.js`
+### Key Concepts in `camera.js`
 
-- **URL query params** drive configuration: `videoBitsPerSecond`, `REFRESHRATE`, `DELAY_MULTIPLIER`, `useAudio`, `logDatabaseOp`, `showMoreVideoInfo`, `deviceId`. Changing settings reloads the page with new query params.
-- **IndexedDB** (`blobStoreDB`): Two object stores — `streamBlobs` (small chunks at REFRESHRATE for live playback) and `downloadBlobs` (large chunks at MAXTIME=5min for download). Blobs are keyed by auto-increment id with a timestamp index.
+- **URL query params** drive configuration: `videoBitsPerSecond`, `REFRESHRATE`, `DELAY_MULTIPLIER`, `useAudio`, `logDatabaseOp`, `showMoreVideoInfo`, `deviceId`. The landing page (`index.js`) builds the query string and navigates to `camera.html`.
+- **IndexedDB** (`blobStoreDB`): One object store — `streamBlobs` (small chunks at REFRESHRATE for live playback). Blobs are keyed by auto-increment id with a timestamp index.
 - **MediaSource API**: A `SourceBuffer` in `sequence` mode receives blobs from IndexedDB one-by-one on a timer. Buffer is capped at `MAXTIME` seconds to prevent RAM overflow.
-- **Dual MediaRecorder**: Two `MediaRecorder` instances record the same stream — one at REFRESHRATE for live streaming, one at DOWNLOAD_DURATION for download-quality chunks.
+- **Single MediaRecorder**: Records the webcam stream at REFRESHRATE intervals, storing WebM blobs to IndexedDB.
+- **MP4 Download**: Uses MediaBunny (`mediabunny.min.js`) to convert a range of WebM blobs from IndexedDB into a single MP4 file for download.
 - **Zoom/Pan**: CSS variables (`--zoom`, `--y-axis`, `--x-axis`) on the `<video>` element, manipulated via mouse wheel (position-dependent zoom) and right-click drag.
+- **Blob prefetch/cache**: Blobs are prefetched from IndexedDB ahead of playback position to reduce latency during rewind and seek operations.
 
 ### Electron Wrapper (`executable/`)
 
 Uses Electron Forge to package the web app as a desktop executable. The `copyFiles` script copies root HTML/JS/CSS into the `executable/` folder before building.
 
-- `executable/main.js` — Electron main process, loads `index.html`
+- `executable/main.js` — Electron main process, loads `camera.html`
 - `executable/forge.config.js` — Build config for Windows (Squirrel), macOS (zip), Linux (deb/rpm)
 - `executable/package.json` — `npm run make` to build distributables
 
 ## Development
 
-No build step needed for the web app — just open `index.html` in a browser (requires HTTPS or localhost for `getUserMedia`).
+No build step needed for the web app — just open `index.html` (or `camera.html` directly with query params) in a browser. Requires HTTPS or localhost for `getUserMedia`.
 
 ### Electron app
 
