@@ -506,6 +506,57 @@ video {
   font-size: 0.9rem;
 }
 
+.streaming-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stream-key-input {
+  width: 250px;
+}
+
+.stream-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stream-status {
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.stream-status.live {
+  color: white;
+  background-color: red;
+  animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.stream-status.connecting {
+  color: orange;
+}
+
+.stream-status.error {
+  color: red;
+}
+
+.stream-status.stopped {
+  color: #0b5e76;
+}
+
+.streaming-setting {
+  grid-column: span 2 / span 2;
+}
+
 .white-input {
   padding: 0.5rem;
   border: 1px solid #0b5e76;

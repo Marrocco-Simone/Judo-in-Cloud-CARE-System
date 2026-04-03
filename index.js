@@ -191,3 +191,19 @@ function listAllCameraDevices() {
     });
   });
 }
+
+// ! YOUTUBE STREAM KEY (Electron only)
+const isElectron = !!window.electronAPI?.isElectron;
+if (isElectron) {
+  const streamKeySetting = document.getElementById("streamKeySetting");
+  streamKeySetting.classList.remove("hidden");
+
+  /** @type {HTMLInputElement} */
+  const streamKeyInput = document.getElementById("streamKeyInput");
+  const savedKey = localStorage.getItem("youtubeStreamKey");
+  if (savedKey) streamKeyInput.value = savedKey;
+
+  streamKeyInput.addEventListener("input", () => {
+    localStorage.setItem("youtubeStreamKey", streamKeyInput.value);
+  });
+}

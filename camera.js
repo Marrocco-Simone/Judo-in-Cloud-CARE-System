@@ -724,6 +724,7 @@ function createMediaRecorder(mediaStream, refreshRate, collectionName) {
     const blob = new Blob(blobs, { type: mimeType });
     // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
     storeBlob(blob, collectionName);
+    document.dispatchEvent(new CustomEvent("care:blob-ready", { detail: { blob } }));
     blobs.length = 0;
     mediaRecorder.start(refreshRate);
   });
@@ -1252,3 +1253,4 @@ function triggerDownload(blob, filename) {
     window.URL.revokeObjectURL(url);
   }, 100);
 }
+
