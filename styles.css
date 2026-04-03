@@ -464,6 +464,26 @@ video {
   accent-color: #0b5e76;
 }
 
+.usb-camera-option {
+  grid-column: span 2 / span 2;
+}
+
+.usb-camera-option hr {
+  border-color: #555;
+}
+
+.usb-camera-hint {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.usb-camera-url-input {
+  width: 220px;
+  display: inline;
+  margin-top: 0.25rem;
+}
+
 .download-bar {
   display: flex;
   align-items: center;
