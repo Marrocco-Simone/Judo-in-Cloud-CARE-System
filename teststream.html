@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CARE System - Test USB Camera Stream</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: system-ui, sans-serif; padding: 1rem; background: #111; color: #eee; }
+      h1 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+      h2 { font-size: 1.1rem; margin: 1rem 0 0.5rem; color: #8cf; }
+      .section { background: #1a1a2e; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+      button { font-size: 1rem; padding: 0.7rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; margin: 0.3rem; }
+      .btn-primary { background: #2563eb; color: white; }
+      .btn-green { background: #16a34a; color: white; }
+      .btn-orange { background: #ea580c; color: white; }
+      .btn-red { background: #dc2626; color: white; }
+      button:disabled { opacity: 0.4; }
+      input[type="text"] { font-size: 1rem; padding: 0.5rem; border-radius: 6px; border: 1px solid #444; background: #0a0a1a; color: #eee; width: 100%; max-width: 400px; }
+      .log { background: #0a0a1a; border: 1px solid #333; border-radius: 6px; padding: 0.7rem; margin-top: 0.5rem; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 40vh; overflow-y: auto; line-height: 1.4; }
+      .ok { color: #4ade80; }
+      .err { color: #f87171; }
+      .warn { color: #fbbf24; }
+      .info { color: #93c5fd; }
+      video, canvas, img { width: 100%; max-width: 640px; border-radius: 6px; background: #000; margin-top: 0.5rem; display: block; }
+      .flex-wrap { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+      label { font-size: 0.9rem; color: #aaa; }
+    </style>
+  </head>
+  <body>
+    <h1>CARE System - Test Stream USB Camera</h1>
+
+    <!-- CONFIG -->
+    <div class="section">
+      <h2>Configurazione</h2>
+      <label>URL server USB Camera:</label>
+      <input type="text" id="streamUrl" value="http://localhost:8081" />
+      <p style="color:#777; font-size:0.8rem; margin-top:0.3rem;">Cambia porta se necessario. L'app USB Camera ti dice l'URL.</p>
+    </div>
+
+    <!-- TEST 1: MJPEG diretto -->
+    <div class="section">
+      <h2>1 - Test MJPEG stream (img tag)</h2>
+      <p style="color:#aaa; font-size:0.85rem;">Molte app IP camera servono uno stream MJPEG su /video o /mjpegfeed o simili.</p>
+      <div class="flex-wrap">
+        <button class="btn-primary" id="btnTestMjpeg">Prova stream MJPEG</button>
+        <button class="btn-red" id="btnStopMjpeg" disabled>Stop</button>
+      </div>
+      <img id="mjpegImg" style="display:none;" />
+      <div class="log" id="log1">In attesa...</div>
+    </div>
+
+    <!-- TEST 2: iframe -->
+    <div class="section">
+      <h2>2 - Test pagina server (iframe)</h2>
+      <p style="color:#aaa; font-size:0.85rem;">Carica la pagina del server USB Camera direttamente.</p>
+      <div class="flex-wrap">
+        <button class="btn-primary" id="btnTestIframe">Carica in iframe</button>
+        <button class="btn-red" id="btnStopIframe" disabled>Chiudi</button>
+      </div>
+      <iframe id="serverIframe" style="display:none; width:100%; max-width:640px; height:480px; border-radius:6px; border:1px solid #333; margin-top:0.5rem;"></iframe>
+      <div class="log" id="log2">In attesa...</div>
+    </div>
+
+    <!-- TEST 3: fetch + canvas + MediaRecorder -->
+    <div class="section">
+      <h2>3 - Test MJPEG → Canvas → MediaRecorder</h2>
+      <p style="color:#aaa; font-size:0.85rem;">Questo e' il test critico: legge lo stream MJPEG, lo disegna su canvas, e verifica che MediaRecorder possa registrarlo (come farebbe il CARE System).</p>
+      <div class="flex-wrap">
+        <button class="btn-primary" id="btnTestCanvas">Avvia stream su canvas</button>
+        <button class="btn-green" id="btnTestRecord" disabled>Testa registrazione (3 sec)</button>
+        <button class="btn-red" id="btnStopCanvas" disabled>Stop</button>
+      </div>
+      <canvas id="streamCanvas" style="display:none;" width="640" height="480"></canvas>
+      <div class="log" id="log3">In attesa...</div>
+    </div>
+
+    <!-- TEST 4: snapshot fetch -->
+    <div class="section">
+      <h2>4 - Test snapshot singolo</h2>
+      <p style="color:#aaa; font-size:0.85rem;">Prova a prendere un singolo frame dal server.</p>
+      <div class="flex-wrap">
+        <button class="btn-primary" id="btnSnapshot">Cattura snapshot</button>
+      </div>
+      <img id="snapshotImg" style="display:none;" />
+      <div class="log" id="log4">In attesa...</div>
+    </div>
+
+    <script>
+      function log(targetId, msg, cls) {
+        const el = document.getElementById(targetId);
+        if (el.textContent === "In attesa...") el.textContent = "";
+        const time = new Date().toLocaleTimeString("it-IT");
+        const span = document.createElement("span");
+        span.className = cls || "";
+        span.textContent = `[${time}] ${msg}\n`;
+        el.appendChild(span);
+        el.scrollTop = el.scrollHeight;
+      }
+
+      function getBaseUrl() {
+        return document.getElementById("streamUrl").value.replace(/\/$/, "");
+      }
+
+      // ========== TEST 1: MJPEG img ==========
+      const mjpegPaths = [
+        "/video", "/mjpegfeed", "/stream", "/cam.mjpg",
+        "/mjpeg", "/live", "/videostream.cgi", "/?action=stream",
+        "/shot.jpg", "/photo.jpg", "/capture",
+      ];
+      let mjpegTestIndex = 0;
+
+      document.getElementById("btnTestMjpeg").addEventListener("click", () => {
+        const L = "log1";
+        const img = document.getElementById("mjpegImg");
+        const base = getBaseUrl();
+
+        // Try multiple known MJPEG paths
+        mjpegTestIndex = 0;
+        tryNextMjpegPath(base, img, L);
+      });
+
+      function tryNextMjpegPath(base, img, L) {
+        if (mjpegTestIndex >= mjpegPaths.length) {
+          log(L, "Nessun path MJPEG ha funzionato. Prova il test 2 (iframe) per vedere cosa serve il server.", "warn");
+          return;
+        }
+
+        const path = mjpegPaths[mjpegTestIndex];
+        const url = base + path;
+        log(L, `Provo: ${url}`, "info");
+
+        img.style.display = "block";
+        img.onerror = () => {
+          log(L, `  ✗ ${path} non funziona`, "warn");
+          mjpegTestIndex++;
+          tryNextMjpegPath(base, img, L);
+        };
+        img.onload = () => {
+          log(L, `  ✓ ${path} FUNZIONA!`, "ok");
+          log(L, `URL stream: ${url}`, "ok");
+          log(L, `Dimensioni immagine: ${img.naturalWidth}x${img.naturalHeight}`, "ok");
+          document.getElementById("btnStopMjpeg").disabled = false;
+        };
+        img.src = url;
+
+        // Timeout per path che non rispondono
+        setTimeout(() => {
+          if (mjpegTestIndex < mjpegPaths.length && img.src === url && !img.complete) {
+            img.onerror();
+          }
+        }, 3000);
+      }
+
+      document.getElementById("btnStopMjpeg").addEventListener("click", () => {
+        const img = document.getElementById("mjpegImg");
+        img.src = "";
+        img.style.display = "none";
+        document.getElementById("btnStopMjpeg").disabled = true;
+        log("log1", "Stream MJPEG fermato.", "info");
+      });
+
+      // ========== TEST 2: iframe ==========
+      document.getElementById("btnTestIframe").addEventListener("click", () => {
+        const L = "log2";
+        const iframe = document.getElementById("serverIframe");
+        const url = getBaseUrl();
+        log(L, `Carico ${url} in iframe...`, "info");
+        iframe.src = url;
+        iframe.style.display = "block";
+        document.getElementById("btnStopIframe").disabled = false;
+        log(L, "Se vedi il video nell'iframe, il server funziona. Guarda l'URL dei vari elementi per capire il path dello stream.", "info");
+      });
+
+      document.getElementById("btnStopIframe").addEventListener("click", () => {
+        const iframe = document.getElementById("serverIframe");
+        iframe.src = "";
+        iframe.style.display = "none";
+        document.getElementById("btnStopIframe").disabled = true;
+        log("log2", "Iframe chiuso.", "info");
+      });
+
+      // ========== TEST 3: Canvas + MediaRecorder ==========
+      let canvasStream = null;
+      let canvasRunning = false;
+      let frameCount = 0;
+
+      document.getElementById("btnTestCanvas").addEventListener("click", async () => {
+        const L = "log3";
+        const canvas = document.getElementById("streamCanvas");
+        const ctx = canvas.getContext("2d");
+        const base = getBaseUrl();
+
+        canvasRunning = true;
+        frameCount = 0;
+        canvas.style.display = "block";
+        document.getElementById("btnStopCanvas").disabled = false;
+
+        log(L, "Cerco stream MJPEG per canvas...", "info");
+
+        // Try fetching as MJPEG stream via fetch API
+        const paths = ["/video", "/mjpegfeed", "/stream", "/cam.mjpg", "/mjpeg", "/live", "/?action=stream"];
+        let streamFound = false;
+
+        for (const path of paths) {
+          if (!canvasRunning) break;
+          const url = base + path;
+          log(L, `Provo fetch: ${url}`, "info");
+          try {
+            const response = await fetch(url);
+            const contentType = response.headers.get("content-type") || "";
+            log(L, `  Content-Type: ${contentType}`, "info");
+
+            if (contentType.includes("multipart")) {
+              log(L, `  ✓ Stream MJPEG trovato su ${path}!`, "ok");
+              streamFound = true;
+              readMjpegStream(response.body, canvas, ctx, L);
+              break;
+            } else if (contentType.includes("image/jpeg")) {
+              log(L, `  ✓ Snapshot JPEG trovato su ${path}, uso polling...`, "ok");
+              streamFound = true;
+              pollJpegFrames(url, canvas, ctx, L);
+              break;
+            } else {
+              log(L, `  ✗ Non e' MJPEG (${contentType})`, "warn");
+            }
+          } catch (err) {
+            log(L, `  ✗ Errore: ${err.message}`, "warn");
+          }
+        }
+
+        if (!streamFound && canvasRunning) {
+          log(L, "Nessun stream MJPEG trovato via fetch. Provo con img polling...", "warn");
+          pollImgFrames(base, canvas, ctx, L);
+        }
+
+        document.getElementById("btnTestRecord").disabled = false;
+      });
+
+      async function readMjpegStream(body, canvas, ctx, L) {
+        const reader = body.getReader();
+        let buffer = new Uint8Array(0);
+        const SOI = 0xFFD8;
+        const EOI = 0xFFD9;
+
+        log(L, "Leggo stream MJPEG...", "info");
+
+        while (canvasRunning) {
+          try {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Append new data
+            const newBuf = new Uint8Array(buffer.length + value.length);
+            newBuf.set(buffer);
+            newBuf.set(value, buffer.length);
+            buffer = newBuf;
+
+            // Find JPEG frames
+            let searchStart = 0;
+            while (searchStart < buffer.length - 1) {
+              // Find SOI
+              let soiPos = -1;
+              for (let i = searchStart; i < buffer.length - 1; i++) {
+                if (buffer[i] === 0xFF && buffer[i + 1] === 0xD8) {
+                  soiPos = i;
+                  break;
+                }
+              }
+              if (soiPos === -1) break;
+
+              // Find EOI after SOI
+              let eoiPos = -1;
+              for (let i = soiPos + 2; i < buffer.length - 1; i++) {
+                if (buffer[i] === 0xFF && buffer[i + 1] === 0xD9) {
+                  eoiPos = i + 2;
+                  break;
+                }
+              }
+              if (eoiPos === -1) break;
+
+              // Extract JPEG frame
+              const jpegData = buffer.slice(soiPos, eoiPos);
+              await paintFrame(jpegData, canvas, ctx);
+              frameCount++;
+              if (frameCount % 30 === 0) {
+                log(L, `Frame: ${frameCount}`, "ok");
+              }
+
+              searchStart = eoiPos;
+            }
+
+            // Keep remaining data
+            if (searchStart > 0) {
+              buffer = buffer.slice(searchStart);
+            }
+          } catch (err) {
+            if (canvasRunning) log(L, `Errore lettura: ${err.message}`, "err");
+            break;
+          }
+        }
+      }
+
+      async function pollJpegFrames(url, canvas, ctx, L) {
+        log(L, "Polling JPEG frames...", "info");
+        while (canvasRunning) {
+          try {
+            const resp = await fetch(url + "?t=" + Date.now());
+            const blob = await resp.blob();
+            const data = new Uint8Array(await blob.arrayBuffer());
+            await paintFrame(data, canvas, ctx);
+            frameCount++;
+            if (frameCount % 30 === 0) log(L, `Frame: ${frameCount}`, "ok");
+          } catch (err) {
+            if (canvasRunning) log(L, `Errore polling: ${err.message}`, "warn");
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+      }
+
+      function pollImgFrames(base, canvas, ctx, L) {
+        const paths = ["/shot.jpg", "/photo.jpg", "/capture", "/snapshot.jpg"];
+        let workingPath = null;
+
+        async function tryPaths() {
+          for (const path of paths) {
+            try {
+              const resp = await fetch(base + path);
+              if (resp.ok && (resp.headers.get("content-type") || "").includes("image")) {
+                workingPath = base + path;
+                log(L, `Snapshot trovato: ${path}. Polling attivo.`, "ok");
+                return true;
+              }
+            } catch (e) { /* skip */ }
+          }
+          log(L, "Nessun endpoint snapshot trovato.", "err");
+          return false;
+        }
+
+        tryPaths().then(ok => {
+          if (!ok) return;
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+
+          function grabFrame() {
+            if (!canvasRunning) return;
+            img.onload = () => {
+              canvas.width = img.naturalWidth || 640;
+              canvas.height = img.naturalHeight || 480;
+              ctx.drawImage(img, 0, 0);
+              frameCount++;
+              if (frameCount % 30 === 0) log(L, `Frame: ${frameCount}`, "ok");
+              setTimeout(grabFrame, 33); // ~30fps
+            };
+            img.onerror = () => setTimeout(grabFrame, 100);
+            img.src = workingPath + "?t=" + Date.now();
+          }
+          grabFrame();
+        });
+      }
+
+      async function paintFrame(jpegData, canvas, ctx) {
+        const blob = new Blob([jpegData], { type: "image/jpeg" });
+        const bmp = await createImageBitmap(blob);
+        if (canvas.width !== bmp.width || canvas.height !== bmp.height) {
+          canvas.width = bmp.width;
+          canvas.height = bmp.height;
+        }
+        ctx.drawImage(bmp, 0, 0);
+        bmp.close();
+      }
+
+      document.getElementById("btnStopCanvas").addEventListener("click", () => {
+        canvasRunning = false;
+        document.getElementById("streamCanvas").style.display = "none";
+        document.getElementById("btnStopCanvas").disabled = true;
+        document.getElementById("btnTestRecord").disabled = true;
+        log("log3", `Stream fermato. Totale frame: ${frameCount}`, "info");
+      });
+
+      // MediaRecorder test
+      document.getElementById("btnTestRecord").addEventListener("click", async () => {
+        const L = "log3";
+        const canvas = document.getElementById("streamCanvas");
+
+        try {
+          const stream = canvas.captureStream(30);
+          log(L, `captureStream(30) OK. Tracks: ${stream.getTracks().length}`, "ok");
+
+          const mimeType = "video/webm;codecs=vp8";
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            log(L, `MediaRecorder non supporta ${mimeType}!`, "err");
+            return;
+          }
+
+          const recorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            videoBitsPerSecond: 1000000,
+          });
+
+          const chunks = [];
+          recorder.ondataavailable = (e) => {
+            chunks.push(e.data);
+            log(L, `  Chunk: ${Math.round(e.data.size / 1024)} KB`, "info");
+          };
+
+          recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            log(L, `Registrazione completata! Dimensione: ${Math.round(blob.size / 1024)} KB`, "ok");
+            log(L, `Chunks: ${chunks.length}`, "ok");
+
+            if (blob.size > 0) {
+              log(L, "\n=== TUTTO FUNZIONA! ===", "ok");
+              log(L, "Canvas → captureStream → MediaRecorder: COMPATIBILE", "ok");
+              log(L, "Possiamo integrare questo nel CARE System!", "ok");
+            } else {
+              log(L, "Blob vuoto — qualcosa non va.", "err");
+            }
+          };
+
+          log(L, "Registro 3 secondi...", "info");
+          recorder.start(1000);
+          setTimeout(() => {
+            if (recorder.state === "recording") {
+              recorder.stop();
+            }
+          }, 3000);
+        } catch (err) {
+          log(L, `Errore MediaRecorder: ${err.message}`, "err");
+        }
+      });
+
+      // ========== TEST 4: Snapshot ==========
+      document.getElementById("btnSnapshot").addEventListener("click", async () => {
+        const L = "log4";
+        const base = getBaseUrl();
+        const img = document.getElementById("snapshotImg");
+        const paths = ["/shot.jpg", "/photo.jpg", "/capture", "/snapshot.jpg", "/video", "/?action=snapshot"];
+
+        for (const path of paths) {
+          const url = base + path;
+          log(L, `Provo: ${url}`, "info");
+          try {
+            const resp = await fetch(url);
+            const ct = resp.headers.get("content-type") || "";
+            log(L, `  Content-Type: ${ct}`, "info");
+            log(L, `  Status: ${resp.status}`, "info");
+
+            if (resp.ok && ct.includes("image")) {
+              const blob = await resp.blob();
+              img.src = URL.createObjectURL(blob);
+              img.style.display = "block";
+              img.onload = () => {
+                log(L, `  ✓ Snapshot OK! ${img.naturalWidth}x${img.naturalHeight}, ${Math.round(blob.size / 1024)} KB`, "ok");
+              };
+              return;
+            }
+          } catch (err) {
+            log(L, `  ✗ ${err.message}`, "warn");
+          }
+        }
+        log(L, "Nessun endpoint snapshot trovato.", "err");
+      });
+    </script>
+  </body>
+</html>
