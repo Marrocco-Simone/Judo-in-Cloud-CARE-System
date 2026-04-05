@@ -651,3 +651,16 @@ video {
     scrollbar-color: #0b5e76 white;
   }
 }
+
+/* Live Scoreboard iframe — PiP in bottom-right corner */
+.live-scoreboard-iframe {
+  position: absolute;
+  bottom: 4rem;
+  right: 0.5rem;
+  width: 25%;
+  height: 25%;
+  border: none;
+  z-index: 5;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}

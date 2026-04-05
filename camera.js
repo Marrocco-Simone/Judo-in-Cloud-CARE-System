@@ -20,6 +20,7 @@ const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
 const usbCameraUrl = urlParams.get("usbCameraUrl");
+const liveUrl = urlParams.get("liveUrl");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -29,6 +30,7 @@ console.log("params: ", {
   logDatabaseOp,
   showMoreVideoInfo,
   usbCameraUrl,
+  liveUrl,
 });
 
 /** @type {HTMLInputElement} */
@@ -79,6 +81,10 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLInputElement} */
+const liveUrlInput = document.getElementById("liveUrlInput");
+liveUrlInput.value = liveUrl || "";
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -101,6 +107,10 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  const liveUrl = liveUrlInput.value;
+  if (liveUrl) newParams.set("liveUrl", liveUrl);
+  else newParams.delete("liveUrl");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
@@ -958,7 +968,7 @@ const keyMap = {
   ".": () => skipInVideoBuffered(0.1),
   p: () => changePlaybackSpeed(),
   backspace: () => returnLive(),
-
+  s: () => toggleLiveScoreboard(),
 };
 
 document.addEventListener("keydown", (e) => {
@@ -990,6 +1000,34 @@ function toggleFullScreenMode() {
 document.addEventListener("fullscreenchange", () => {
   videoContainer.classList.toggle("full-screen", document.fullscreenElement);
 });
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * LIVE SCOREBOARD
+
+/** @type {HTMLButtonElement} */
+const scoreboardBtn = document.querySelector(".scoreboard-btn");
+let liveIframe = null;
+
+if (liveUrl) {
+  scoreboardBtn.style.display = "";
+}
+
+function toggleLiveScoreboard() {
+  if (!liveUrl) return;
+  if (liveIframe) {
+    liveIframe.remove();
+    liveIframe = null;
+  } else {
+    liveIframe = document.createElement("iframe");
+    liveIframe.src = liveUrl;
+    liveIframe.className = "live-scoreboard-iframe";
+    liveIframe.allow = "autoplay";
+    liveIframe.title = "Live Scoreboard";
+    videoContainer.appendChild(liveIframe);
+  }
+}
+
+scoreboardBtn.addEventListener("click", toggleLiveScoreboard);
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * PLAY / PAUSE

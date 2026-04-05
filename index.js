@@ -19,6 +19,7 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+const liveUrl = urlParams.get("liveUrl") || "";
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -27,6 +28,7 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  liveUrl,
 });
 
 /** @type {HTMLInputElement} */
@@ -77,6 +79,10 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLInputElement} */
+const liveUrlInput = document.getElementById("liveUrlInput");
+liveUrlInput.value = liveUrl;
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -99,6 +105,10 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  const liveUrl = liveUrlInput.value;
+  if (liveUrl) newParams.set("liveUrl", liveUrl);
+  else newParams.delete("liveUrl");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
