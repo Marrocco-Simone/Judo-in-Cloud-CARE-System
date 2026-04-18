@@ -103,8 +103,15 @@ function setNewQueryParams(e) {
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
   );
-  const deviceId = cameraSelect.value;
-  newParams.set("deviceId", deviceId);
+  const selectedValue = cameraSelect ? cameraSelect.value : "";
+  if (selectedValue === "__USB_HTTP__") {
+    const usbUrl = document.getElementById("usbCameraUrl");
+    newParams.set("usbCameraUrl", usbUrl ? usbUrl.value : "http://localhost:8081");
+    newParams.delete("deviceId");
+  } else {
+    newParams.set("deviceId", selectedValue);
+    newParams.delete("usbCameraUrl");
+  }
 
   // window.location.search = newParams.toString();
   window.location.href = `camera.html?${newParams.toString()}`;
@@ -189,6 +196,8 @@ function listAllCameraDevices() {
       label.appendChild(labelText);
       cameraSelectDiv.appendChild(label);
     });
+
+    addUSBCameraOption();
   });
 }
 
@@ -206,4 +215,40 @@ if (isElectron) {
   streamKeyInput.addEventListener("input", () => {
     localStorage.setItem("youtubeStreamKey", streamKeyInput.value);
   });
+}
+
+function addUSBCameraOption() {
+  if (cameraSelectDiv.querySelector("#usbCameraOption")) return;
+
+  const container = document.createElement("div");
+  container.id = "usbCameraOption";
+  container.className = "usb-camera-option";
+
+  const hr = document.createElement("hr");
+  container.appendChild(hr);
+
+  const label = document.createElement("label");
+  label.className = "camera-select-radio-label";
+
+  const radio = document.createElement("input");
+  radio.type = "radio";
+  radio.name = "camera-select";
+  radio.value = "__USB_HTTP__";
+  radio.className = "camera-radio-input";
+
+  label.appendChild(radio);
+  label.appendChild(
+    document.createTextNode("Telecamera USB via app (Android)")
+  );
+  container.appendChild(label);
+
+  const hint = document.createElement("p");
+  hint.className = "usb-camera-hint";
+  hint.innerHTML =
+    'Richiede l\'app "USB Camera" attiva con server HTTP.<br/>' +
+    'URL: <input type="text" id="usbCameraUrl" value="http://localhost:8081"' +
+    ' class="white-input usb-camera-url-input" />';
+  container.appendChild(hint);
+
+  cameraSelectDiv.appendChild(container);
 }
