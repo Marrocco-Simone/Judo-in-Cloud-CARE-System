@@ -165,7 +165,7 @@ function getWebcamStream() {
     .catch((err) => {
       console.error(err);
       alert(
-        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).\n\nErrore: ${err.message}`
+        t("error.recording", { mimeType: mimeType, message: err.message })
       );
     });
 }
@@ -221,18 +221,32 @@ function addUSBCameraOption() {
   radio.className = "camera-radio-input";
 
   label.appendChild(radio);
-  label.appendChild(
-    document.createTextNode("Telecamera USB via app (Android)")
-  );
+  label.appendChild(document.createTextNode(t("camera.usb_option")));
   container.appendChild(label);
 
   const hint = document.createElement("p");
   hint.className = "usb-camera-hint";
   hint.innerHTML =
-    'Richiede l\'app "USB Camera" attiva con server HTTP.<br/>' +
-    'URL: <input type="text" id="usbCameraUrl" value="http://localhost:8081"' +
+    t("camera.usb_hint") + "<br/>" +
+    t("camera.usb_url_label") + ' <input type="text" id="usbCameraUrl" value="http://localhost:8081"' +
     ' class="white-input usb-camera-url-input" />';
   container.appendChild(hint);
 
   cameraSelectDiv.appendChild(container);
+}
+
+// ! Language selector
+function initLanguageSelector() {
+  const langSelect = document.getElementById("language-select");
+  if (langSelect) {
+    langSelect.addEventListener("change", (e) => {
+      setLanguage(e.target.value);
+    });
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initLanguageSelector);
+} else {
+  initLanguageSelector();
 }
