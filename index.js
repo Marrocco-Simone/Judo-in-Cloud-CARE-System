@@ -19,6 +19,7 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+const usbCameraUrl = urlParams.get("usbCameraUrl");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -219,6 +220,7 @@ function addUSBCameraOption() {
   radio.name = "camera-select";
   radio.value = "__USB_HTTP__";
   radio.className = "camera-radio-input";
+  if (usbCameraUrl) radio.checked = true;
 
   label.appendChild(radio);
   label.appendChild(document.createTextNode(t("camera.usb_option")));
@@ -228,8 +230,9 @@ function addUSBCameraOption() {
   hint.className = "usb-camera-hint";
   hint.innerHTML =
     t("camera.usb_hint") + "<br/>" +
-    t("camera.usb_url_label") + ' <input type="text" id="usbCameraUrl" value="http://localhost:8081"' +
-    ' class="white-input usb-camera-url-input" />';
+    t("camera.usb_url_label") + ' <input type="text" id="usbCameraUrl" value="' +
+    (usbCameraUrl || "http://localhost:8081") +
+    '" class="white-input usb-camera-url-input" />';
   container.appendChild(hint);
 
   cameraSelectDiv.appendChild(container);

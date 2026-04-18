@@ -11,6 +11,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -145,7 +146,9 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     // Reload page with usbCameraUrl if camera becomes available
                     if (isAvailable && webView.url?.contains("usbCameraUrl") != true) {
-                        webView.loadUrl(getCareUrl())
+                        val url = getCareUrl()
+                        Toast.makeText(this, "Reloading with USB camera...", Toast.LENGTH_SHORT).show()
+                        webView.loadUrl(url)
                     }
                 }
             }

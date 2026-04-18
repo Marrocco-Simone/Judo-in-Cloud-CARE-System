@@ -1,186 +1,263 @@
 package com.judoincloud.care
 
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbManager
-import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import com.serenegiant.usb.IFrameCallback
+import com.serenegiant.usb.USBMonitor
+import com.serenegiant.usb.UVCCamera
+import java.nio.ByteBuffer
 
 /**
  * UVC Bridge for detecting and streaming from USB cameras.
- * 
- * Note: This is a simplified implementation that uses Android's USB Host API.
- * For full MJPEG streaming from UVC devices, a native library integration would be needed.
- * This implementation provides the architecture and detects USB camera attachment.
+ *
+ * Uses UVCCamera library (org.uvccamera) to capture frames from USB UVC cameras
+ * and pushes JPEG frames to the MJPEG server for WebView consumption.
  */
 class UvcBridge(
     private val context: Context,
     private val mjpegServer: MjpegServer,
     private val onAvailabilityChanged: (Boolean) -> Unit
 ) {
-    private val usbManager: UsbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
     private var isRunning = false
-    private var connectedCamera: UsbDevice? = null
-    
-    private val usbReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                ACTION_USB_PERMISSION -> {
-                    synchronized(this) {
-                        val device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE) as? UsbDevice
-                        if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                            device?.let { onUsbPermissionGranted(it) }
-                        }
+    private var usbMonitor: USBMonitor? = null
+    private var uvcCamera: UVCCamera? = null
+    private var connectedDevice: UsbDevice? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private var frameCount = 0
+
+    private val frameCallback = IFrameCallback { frame ->
+        if (!isRunning || frame == null) return@IFrameCallback
+
+        try {
+            // Frame is in NV21 format, convert to JPEG
+            val data = ByteArray(frame.remaining())
+            frame.get(data)
+            frame.clear()
+
+            val jpegData = FrameConverter.convertNv21ToJpeg(data, actualWidth, actualHeight, JPEG_QUALITY)
+            mjpegServer.pushFrame(jpegData)
+
+            frameCount++
+            if (frameCount == 1) {
+                mainHandler.post {
+                    Toast.makeText(context, "First frame received! (${jpegData.size} bytes)", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("UvcBridge", "Error processing frame: ${e.message}")
+        }
+    }
+
+    private val onDeviceConnectListener = object : USBMonitor.OnDeviceConnectListener {
+        override fun onAttach(device: UsbDevice?) {
+            device?.let {
+                android.util.Log.i("UvcBridge", "USB device attached: ${it.productName}")
+                if (isUvcDevice(it)) {
+                    mainHandler.post {
+                        Toast.makeText(context, "USB Camera detected: ${it.productName}", Toast.LENGTH_SHORT).show()
                     }
+                    usbMonitor?.requestPermission(it)
                 }
-                UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
-                    val device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE) as? UsbDevice
-                    device?.let { onDeviceAttached(it) }
+            }
+        }
+
+        override fun onDettach(device: UsbDevice?) {
+            device?.let {
+                android.util.Log.i("UvcBridge", "USB device detached: ${it.productName}")
+                if (connectedDevice?.deviceId == it.deviceId) {
+                    stopCamera()
+                    mainHandler.post { onAvailabilityChanged(false) }
                 }
-                UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                    val device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE) as? UsbDevice
-                    device?.let { onDeviceDetached(it) }
-                }
+            }
+        }
+
+        override fun onConnect(
+            device: UsbDevice?,
+            ctrlBlock: USBMonitor.UsbControlBlock?,
+            createNew: Boolean
+        ) {
+            android.util.Log.i("UvcBridge", "USB device connected: ${device?.productName}")
+            mainHandler.post {
+                Toast.makeText(context, "USB Camera connected!", Toast.LENGTH_SHORT).show()
+            }
+            device?.let { connectedDevice = it }
+            ctrlBlock?.let { startCamera(it) }
+        }
+
+        override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
+            android.util.Log.i("UvcBridge", "USB device disconnected: ${device?.productName}")
+            stopCamera()
+            mainHandler.post { onAvailabilityChanged(false) }
+        }
+
+        override fun onCancel(device: UsbDevice?) {
+            android.util.Log.i("UvcBridge", "USB permission cancelled for: ${device?.productName}")
+            mainHandler.post {
+                Toast.makeText(context, "USB permission denied", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     fun start() {
         if (isRunning) return
-        
+
         isRunning = true
-        
-        // Register USB broadcast receiver
-        val filter = IntentFilter().apply {
-            addAction(ACTION_USB_PERMISSION)
-            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+
+        try {
+            usbMonitor = USBMonitor(context, onDeviceConnectListener)
+            usbMonitor?.register()
+            android.util.Log.i("UvcBridge", "UVC Bridge started")
+        } catch (e: Exception) {
+            android.util.Log.e("UvcBridge", "Failed to start USBMonitor: ${e.message}")
         }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(usbReceiver, filter)
-        }
-        
-        // Check for already connected USB devices
-        checkExistingDevices()
-        
-        android.util.Log.i("UvcBridge", "UVC Bridge started")
     }
 
     fun stop() {
         isRunning = false
-        
+
+        stopCamera()
+
         try {
-            context.unregisterReceiver(usbReceiver)
+            usbMonitor?.unregister()
+            usbMonitor?.destroy()
+            usbMonitor = null
         } catch (e: Exception) {
-            // Receiver may not be registered
+            android.util.Log.e("UvcBridge", "Error stopping USBMonitor: ${e.message}")
         }
-        
-        connectedCamera = null
-        onAvailabilityChanged(false)
-        
+
+        connectedDevice = null
         android.util.Log.i("UvcBridge", "UVC Bridge stopped")
     }
 
-    private fun checkExistingDevices() {
-        val deviceList = usbManager.deviceList
-        for (device in deviceList.values) {
-            if (isUvcDevice(device)) {
-                onDeviceAttached(device)
-                break
+    private fun startCamera(ctrlBlock: USBMonitor.UsbControlBlock) {
+        Thread {
+            try {
+                // Small delay to ensure USB interface is ready
+                Thread.sleep(500)
+
+                // Ensure any previous camera is fully closed
+                stopCamera()
+                Thread.sleep(200)
+
+                uvcCamera = UVCCamera()
+                uvcCamera?.open(ctrlBlock)
+
+                // Get supported sizes and pick the best one
+                val supportedSizes = uvcCamera?.supportedSizeList
+                android.util.Log.i("UvcBridge", "Supported sizes: $supportedSizes")
+
+                var width = PREVIEW_WIDTH
+                var height = PREVIEW_HEIGHT
+
+                // Try to find a supported resolution
+                if (supportedSizes != null && supportedSizes.isNotEmpty()) {
+                    // Look for 640x480 or closest match
+                    val preferred = supportedSizes.find { it.width == 640 && it.height == 480 }
+                    val fallback = supportedSizes.firstOrNull()
+
+                    val selected = preferred ?: fallback
+                    if (selected != null) {
+                        width = selected.width
+                        height = selected.height
+                    }
+                    android.util.Log.i("UvcBridge", "Selected size: ${width}x${height}")
+                }
+
+                // Try MJPEG first, then YUYV
+                var formatUsed = "MJPEG"
+                try {
+                    uvcCamera?.setPreviewSize(width, height, UVCCamera.FRAME_FORMAT_MJPEG)
+                } catch (e: Exception) {
+                    try {
+                        uvcCamera?.setPreviewSize(width, height, UVCCamera.FRAME_FORMAT_YUYV)
+                        formatUsed = "YUYV"
+                    } catch (e2: Exception) {
+                        // Try default
+                        uvcCamera?.setPreviewSize(width, height, 0)
+                        formatUsed = "DEFAULT"
+                    }
+                }
+
+                android.util.Log.i("UvcBridge", "Using $formatUsed format at ${width}x${height}")
+
+                // Set frame callback
+                uvcCamera?.setFrameCallback(frameCallback, UVCCamera.PIXEL_FORMAT_NV21)
+                uvcCamera?.startPreview()
+
+                // Update actual dimensions used
+                actualWidth = width
+                actualHeight = height
+
+                mainHandler.post {
+                    onAvailabilityChanged(true)
+                    Toast.makeText(context, "Camera: ${width}x${height} ($formatUsed)", Toast.LENGTH_SHORT).show()
+                }
+                android.util.Log.i("UvcBridge", "Camera preview started at ${width}x${height}")
+            } catch (e: Exception) {
+                android.util.Log.e("UvcBridge", "Failed to start camera: ${e.message}")
+                mainHandler.post {
+                    Toast.makeText(context, "Camera error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+                stopCamera()
+                // Fall back to placeholder
+                mainHandler.post { onAvailabilityChanged(true) }
+                startPlaceholderStream()
             }
+        }.start()
+    }
+
+    private var actualWidth = PREVIEW_WIDTH
+    private var actualHeight = PREVIEW_HEIGHT
+
+    @Synchronized
+    private fun stopCamera() {
+        try {
+            uvcCamera?.let { camera ->
+                try { camera.stopPreview() } catch (e: Exception) {}
+                try { camera.setFrameCallback(null, 0) } catch (e: Exception) {}
+                try { camera.close() } catch (e: Exception) {}
+                try { camera.destroy() } catch (e: Exception) {}
+            }
+            uvcCamera = null
+            frameCount = 0
+        } catch (e: Exception) {
+            android.util.Log.e("UvcBridge", "Error stopping camera: ${e.message}")
         }
     }
 
     private fun isUvcDevice(device: UsbDevice): Boolean {
-        // UVC devices typically have class 239 (Miscellaneous) with subclass 2 (Common Class) 
-        // and protocol 1 (Interface Association Descriptor)
-        // Or they may expose as class 14 (Video)
-        
+        // UVC devices have class 14 (Video) or class 239 (Misc) with subclass 2
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
             val ifaceClass = iface.interfaceClass
             val ifaceSubclass = iface.interfaceSubclass
-            
-            // UVC interface: class=14 (Video), subclass=1 (Video Control) or subclass=2 (Video Streaming)
-            // Or class=239 (Misc), subclass=2, protocol=1
+
             if (ifaceClass == 14 || (ifaceClass == 239 && ifaceSubclass == 2)) {
                 return true
             }
         }
-        
-        // Fallback: check if device name contains camera-related terms
+
+        // Fallback: check device name
         val deviceName = device.productName?.lowercase() ?: ""
         val manufacturer = device.manufacturerName?.lowercase() ?: ""
-        
-        return deviceName.contains("camera") || 
+
+        return deviceName.contains("camera") ||
                deviceName.contains("webcam") ||
                deviceName.contains("uvc") ||
                manufacturer.contains("camera")
     }
 
-    private fun onDeviceAttached(device: UsbDevice) {
-        if (!isUvcDevice(device)) return
-        
-        android.util.Log.i("UvcBridge", "UVC device attached: ${device.productName} (${device.vendorId}:${device.productId})")
-        
-        if (usbManager.hasPermission(device)) {
-            onUsbPermissionGranted(device)
-        } else {
-            requestUsbPermission(device)
-        }
-    }
-
-    private fun onDeviceDetached(device: UsbDevice) {
-        if (connectedCamera == device) {
-            android.util.Log.i("UvcBridge", "UVC device detached: ${device.productName}")
-            connectedCamera = null
-            onAvailabilityChanged(false)
-        }
-    }
-
-    private fun requestUsbPermission(device: UsbDevice) {
-        val permissionIntent = PendingIntent.getBroadcast(
-            context,
-            0,
-            Intent(ACTION_USB_PERMISSION),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                PendingIntent.FLAG_IMMUTABLE
-            } else {
-                0
-            }
-        )
-        usbManager.requestPermission(device, permissionIntent)
-    }
-
-    private fun onUsbPermissionGranted(device: UsbDevice) {
-        android.util.Log.i("UvcBridge", "USB permission granted for: ${device.productName}")
-        connectedCamera = device
-        
-        // Note: Full UVC streaming implementation would require native code
-        // For now, we mark the camera as available so the UI can offer the USB option
-        // The actual MJPEG streaming would be handled by a native UVC library
-        onAvailabilityChanged(true)
-        
-        // Start a placeholder frame pusher for testing
-        // In a full implementation, this would be replaced by actual UVC frame capture
-        startPlaceholderStream()
-    }
-
     private fun startPlaceholderStream() {
-        // This is a placeholder that generates a simple test pattern
-        // In production, this would be replaced by actual UVC frame capture
+        android.util.Log.w("UvcBridge", "Starting placeholder stream (UVC capture unavailable)")
+
         Thread {
             var counter = 0
-            while (isRunning && connectedCamera != null) {
+            while (isRunning && connectedDevice != null) {
                 try {
-                    // Generate a simple colored test frame as placeholder
-                    // In real implementation, this would come from UVC native library
                     val jpegFrame = generateTestFrame(counter++)
                     mjpegServer.pushFrame(jpegFrame)
                     Thread.sleep(33) // ~30 fps
@@ -193,17 +270,11 @@ class UvcBridge(
     }
 
     private fun generateTestFrame(counter: Int): ByteArray {
-        // This is a minimal placeholder - creates a simple colored JPEG
-        // In production, this would be replaced by actual camera frames
-        
-        // Simple 2x2 pixel JPEG (minimal valid JPEG)
-        // This is just for testing the pipeline - in production, 
-        // actual UVC frames would be captured via native code
         val minimalJpeg = byteArrayOf(
-            0xFF.toByte(), 0xD8.toByte(), // SOI
+            0xFF.toByte(), 0xD8.toByte(),
             0xFF.toByte(), 0xE0.toByte(), 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-            0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, // JFIF header
-            0xFF.toByte(), 0xDB.toByte(), 0x00, 0x43, 0x00, // DQT
+            0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+            0xFF.toByte(), 0xDB.toByte(), 0x00, 0x43, 0x00,
             0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07,
             0x09, 0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D, 0x0C, 0x0B, 0x0B,
             0x0C, 0x19, 0x12, 0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E,
@@ -211,19 +282,21 @@ class UvcBridge(
             0x2C, 0x23, 0x1C, 0x1C, 0x28, 0x37, 0x29, 0x2C, 0x30, 0x31,
             0x34, 0x34, 0x34, 0x1F, 0x27, 0x39, 0x3D, 0x38, 0x32, 0x3C,
             0x2E, 0x33, 0x34, 0x32,
-            0xFF.toByte(), 0xC0.toByte(), 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00, // SOF0 (1x1 pixel)
-            0xFF.toByte(), 0xC4.toByte(), 0x00, 0x1F, 0x00, // DHT
+            0xFF.toByte(), 0xC0.toByte(), 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+            0xFF.toByte(), 0xC4.toByte(), 0x00, 0x1F, 0x00,
             0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
-            0xFF.toByte(), 0xDA.toByte(), 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00, // SOS
-            0xFB.toByte(), 0xD5.toByte(), 0x59, 0x26, // Scan data
-            0xFF.toByte(), 0xD9.toByte() // EOI
+            0xFF.toByte(), 0xDA.toByte(), 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00,
+            0xFB.toByte(), 0xD5.toByte(), 0x59, 0x26,
+            0xFF.toByte(), 0xD9.toByte()
         )
-        
+
         return minimalJpeg
     }
 
     companion object {
-        private const val ACTION_USB_PERMISSION = "com.judoincloud.care.USB_PERMISSION"
+        private const val PREVIEW_WIDTH = 640
+        private const val PREVIEW_HEIGHT = 480
+        private const val JPEG_QUALITY = 85
     }
 }
