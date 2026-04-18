@@ -5,7 +5,7 @@ on:
       - master
 
 jobs:
-  # Build Android APK
+  # Build Android APK first
   build_android:
     runs-on: ubuntu-latest
     steps:
@@ -27,35 +27,33 @@ jobs:
         working-directory: ./android
         run: gradle assembleRelease
       
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
-      
       - name: Rename APK for release
         run: |
           VERSION=$(grep "versionName" android/app/build.gradle.kts | grep -o '"[^"]*"' | tr -d '"')
           cp android/app/build/outputs/apk/release/app-release-unsigned.apk "jic-care-android-v${VERSION}.apk"
-          echo "APK_VERSION=${VERSION}" >> $GITHUB_ENV
           ls -la *.apk
       
-      - name: Upload APK to Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: jic-care-android-*.apk
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: android-apk
+          path: jic-care-android-*.apk
 
-  # Build and publish Electron for Linux
+  # Build and publish Electron for Linux (creates the release draft)
   publish_on_linux:
     needs: build_android
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(cat executable/package.json | grep '"version"' | head -1 | sed 's/.*: "\(.*\)".*/\1/' | tr -d ',')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -81,3 +79,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cd executable; npm run publish
+
+  # Upload APK to the same release as Electron assets
+  upload_apk_to_release:
+    needs: [build_android, publish_on_linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: ./
+      
+      - name: List downloaded files
+        run: ls -la *.apk
+      
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.publish_on_linux.outputs.version }}
+          files: jic-care-android-*.apk
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
