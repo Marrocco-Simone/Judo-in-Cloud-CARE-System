@@ -28,6 +28,7 @@ class UvcBridge(
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var frameCount = 0
+    private var cameraOpened = false
 
     private val frameCallback = IFrameCallback { frame ->
         if (!isRunning || frame == null) return@IFrameCallback
@@ -130,6 +131,7 @@ class UvcBridge(
         }
 
         connectedDevice = null
+        cameraOpened = false
         android.util.Log.i("UvcBridge", "UVC Bridge stopped")
     }
 
@@ -139,12 +141,16 @@ class UvcBridge(
                 // Small delay to ensure USB interface is ready
                 Thread.sleep(500)
 
-                // Ensure any previous camera is fully closed
-                stopCamera()
-                Thread.sleep(200)
+                // Only stop previous camera if one was actually opened before
+                if (cameraOpened) {
+                    android.util.Log.i("UvcBridge", "Closing previous camera before reopening")
+                    stopCamera()
+                    Thread.sleep(200)
+                }
 
                 uvcCamera = UVCCamera()
                 uvcCamera?.open(ctrlBlock)
+                cameraOpened = true
 
                 // Get supported sizes and pick the best one
                 val supportedSizes = uvcCamera?.supportedSizeList
@@ -224,6 +230,7 @@ class UvcBridge(
             }
             uvcCamera = null
             frameCount = 0
+            cameraOpened = false
         } catch (e: Exception) {
             android.util.Log.e("UvcBridge", "Error stopping camera: ${e.message}")
         }
