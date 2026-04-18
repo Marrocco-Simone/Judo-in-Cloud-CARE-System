@@ -18,13 +18,15 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
     
     private lateinit var webView: WebView
-    private var pendingPermissionRequest: PermissionRequest? = null
     private val PERMISSION_REQUEST_CODE = 100
     private val ALLOWED_ORIGIN = "care.judoincloud.com"
-    private val REQUIRED_PERMISSIONS = arrayOf(
-        Manifest.permission.CAMERA,
-        Manifest.permission.RECORD_AUDIO
-    )
+    private val BASE_URL = "https://care.judoincloud.com"
+    private val MJPEG_PORT = 8081
+    
+    // UVC Bridge components
+    private var uvcBridge: UvcBridge? = null
+    private var mjpegServer: MjpegServer? = null
+    private var usbCameraAvailable = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +37,10 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         setupWebView()
         
-        // Richiedi permessi prima di caricare la pagina
+        // Setup UVC bridge for external USB cameras
+        setupUvcBridge()
+        
+        // Request permissions and load URL based on grant results
         requestPermissions()
     }
 
@@ -70,8 +75,9 @@ class MainActivity : AppCompatActivity() {
                 mediaPlaybackRequiresUserGesture = false
                 cacheMode = WebSettings.LOAD_DEFAULT
                 
-                // Strict security settings
-                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                // Allow mixed content for local MJPEG server (HTTP localhost inside HTTPS page)
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                allowContentAccess = true
                 allowFileAccess = false
                 
                 userAgentString = settings.userAgentString + " JiC-CARE-Android"
@@ -90,9 +96,21 @@ class MainActivity : AppCompatActivity() {
                             return
                         }
                         
+                        // Check runtime permissions before granting
+                        val hasCamera = ContextCompat.checkSelfPermission(
+                            this@MainActivity, Manifest.permission.CAMERA
+                        ) == PackageManager.PERMISSION_GRANTED
+                        
+                        val hasAudio = ContextCompat.checkSelfPermission(
+                            this@MainActivity, Manifest.permission.RECORD_AUDIO
+                        ) == PackageManager.PERMISSION_GRANTED
+                        
                         val grantedResources = req.resources.filter { resource ->
-                            resource == PermissionRequest.RESOURCE_VIDEO_CAPTURE ||
-                            resource == PermissionRequest.RESOURCE_AUDIO_CAPTURE
+                            when (resource) {
+                                PermissionRequest.RESOURCE_VIDEO_CAPTURE -> hasCamera
+                                PermissionRequest.RESOURCE_AUDIO_CAPTURE -> hasAudio
+                                else -> false
+                            }
                         }.toTypedArray()
                         
                         if (grantedResources.isNotEmpty()) {
@@ -104,9 +122,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 override fun onConsoleMessage(message: android.webkit.ConsoleMessage?): Boolean {
-                    if (BuildConfig.DEBUG) {
-                        android.util.Log.d("WebView", "${message?.message()} -- From line ${message?.lineNumber()} of ${message?.sourceId()}")
-                    }
+                    android.util.Log.d("WebView", "${message?.message()} -- From line ${message?.lineNumber()} of ${message?.sourceId()}")
                     return true
                 }
             }
@@ -119,16 +135,84 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupUvcBridge() {
+        try {
+            mjpegServer = MjpegServer(MJPEG_PORT)
+            mjpegServer?.start()
+            
+            uvcBridge = UvcBridge(this, mjpegServer!!) { isAvailable ->
+                usbCameraAvailable = isAvailable
+                runOnUiThread {
+                    // Reload page with usbCameraUrl if camera becomes available
+                    if (isAvailable && webView.url?.contains("usbCameraUrl") != true) {
+                        webView.loadUrl(getCareUrl())
+                    }
+                }
+            }
+            uvcBridge?.start()
+        } catch (e: Exception) {
+            android.util.Log.e("UvcBridge", "Failed to setup UVC bridge: ${e.message}")
+        }
+    }
+
+    private fun hasCameraPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Build the CARE System URL with appropriate parameters based on:
+     * - Audio permission status (fallback to useAudio=false if denied)
+     * - USB camera availability (add usbCameraUrl if available)
+     */
+    private fun getCareUrl(): String {
+        val params = mutableListOf<String>()
+        
+        // Audio fallback: if RECORD_AUDIO not granted, disable audio
+        if (!hasAudioPermission()) {
+            params.add("useAudio=false")
+            android.util.Log.i("MainActivity", "Audio permission not granted, using useAudio=false fallback")
+        }
+        
+        // USB camera: if UVC bridge detected a device, use local MJPEG stream
+        if (usbCameraAvailable) {
+            params.add("usbCameraUrl=http://127.0.0.1:$MJPEG_PORT")
+            android.util.Log.i("MainActivity", "USB camera available, using usbCameraUrl=http://127.0.0.1:$MJPEG_PORT")
+        }
+        
+        return if (params.isEmpty()) {
+            BASE_URL
+        } else {
+            "$BASE_URL?${params.joinToString("&")}"
+        }
+    }
+
     private fun requestPermissions() {
-        val permissionsToRequest = REQUIRED_PERMISSIONS.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
+        val permissionsToRequest = mutableListOf<String>()
+        
+        if (!hasCameraPermission()) {
+            permissionsToRequest.add(Manifest.permission.CAMERA)
+        }
+        if (!hasAudioPermission()) {
+            permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+        }
         
         if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest, PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(
+                this, 
+                permissionsToRequest.toTypedArray(), 
+                PERMISSION_REQUEST_CODE
+            )
         } else {
-            // All permissions already granted, load URL
-            webView.loadUrl("https://care.judoincloud.com")
+            // All permissions already granted, load URL with parameters
+            webView.loadUrl(getCareUrl())
         }
     }
 
@@ -140,8 +224,11 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            // Load URL regardless of permission result - web app will request again if needed
-            webView.loadUrl("https://care.judoincloud.com")
+            // Load URL with appropriate parameters based on actual permission results
+            // If audio was denied, getCareUrl() will automatically add useAudio=false
+            val url = getCareUrl()
+            android.util.Log.i("MainActivity", "Loading URL after permission result: $url")
+            webView.loadUrl(url)
         }
     }
 
@@ -165,6 +252,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        uvcBridge?.stop()
+        mjpegServer?.stop()
         webView.stopLoading()
         webView.loadUrl("about:blank")
         webView.destroy()
