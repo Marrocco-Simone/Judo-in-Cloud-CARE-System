@@ -82,21 +82,33 @@ class MjpegServer(private val port: Int = 8081) {
     private fun handleClient(socket: Socket) {
         Thread {
             try {
+                val input = socket.getInputStream()
                 val out = socket.getOutputStream()
-                
+
+                // Read HTTP request (required for proper HTTP handshake)
+                val reader = input.bufferedReader()
+                var line = reader.readLine()
+                android.util.Log.i("MjpegServer", "Request: $line")
+
+                // Consume remaining headers
+                while (line != null && line.isNotEmpty()) {
+                    line = reader.readLine()
+                }
+
                 // Send HTTP headers for MJPEG stream
                 val headers = "HTTP/1.1 200 OK\r\n" +
                         "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n" +
                         "Cache-Control: no-cache\r\n" +
                         "Pragma: no-cache\r\n" +
+                        "Access-Control-Allow-Origin: *\r\n" +
                         "Connection: close\r\n\r\n"
-                
+
                 out.write(headers.toByteArray())
                 out.flush()
-                
+
                 clients.add(out)
                 android.util.Log.i("MjpegServer", "Client connected: ${socket.inetAddress}")
-                
+
                 // Keep connection alive until client disconnects or server stops
                 while (running && !socket.isClosed) {
                     try {
@@ -106,7 +118,7 @@ class MjpegServer(private val port: Int = 8081) {
                     }
                 }
             } catch (e: Exception) {
-                // Client disconnected or error
+                android.util.Log.e("MjpegServer", "Client error: ${e.message}")
             } finally {
                 try { socket.close() } catch (e: Exception) { }
             }

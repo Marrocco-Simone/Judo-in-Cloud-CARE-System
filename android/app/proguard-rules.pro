@@ -15,3 +15,17 @@
 
 # Keep MainActivity
 -keep class com.judoincloud.care.MainActivity { *; }
+
+# Keep UVC Bridge and MJPEG Server
+-keep class com.judoincloud.care.UvcBridge { *; }
+-keep class com.judoincloud.care.MjpegServer { *; }
+-keep class com.judoincloud.care.FrameConverter { *; }
+
+# Keep UVCCamera library (org.uvccamera) classes
+-keep class com.serenegiant.usb.** { *; }
+-keep class org.uvccamera.** { *; }
+
+# Keep native methods for UVC library
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
