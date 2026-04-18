@@ -31,3 +31,4 @@ captures/
 
 # Profiling
 *.hprof
+app/release/*
