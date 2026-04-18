@@ -30,14 +30,14 @@ jobs:
       - name: Rename APK for release
         run: |
           VERSION=$(grep "versionName" android/app/build.gradle.kts | grep -o '"[^"]*"' | tr -d '"')
-          cp android/app/build/outputs/apk/release/app-release-unsigned.apk "jic-care-android-v${VERSION}.apk"
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk "judo-in-cloud-care-system-${VERSION}.apk"
           ls -la *.apk
       
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: jic-care-android-*.apk
+          path: judo-in-cloud-care-system-*.apk
 
   # Build and publish Electron for Linux (creates the release draft)
   publish_on_linux:
@@ -98,7 +98,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.publish_on_linux.outputs.version }}
-          files: jic-care-android-*.apk
+          files: judo-in-cloud-care-system-*.apk
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
