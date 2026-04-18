@@ -14,7 +14,7 @@ const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
 const DELAY_MULTIPLIER = Number(urlParams.get("DELAY_MULTIPLIER"))
   ? Number(urlParams.get("DELAY_MULTIPLIER"))
   : 3;
-const useAudio = urlParams.get("useAudio") === "false" ? false : true;
+const useAudio = urlParams.get("useAudio") === "true" ? true : false;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
