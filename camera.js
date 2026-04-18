@@ -700,7 +700,7 @@ function getWebcamStream() {
     .catch((err) => {
       console.error(err);
       alert(
-        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).\n\nErrore: ${err.message}`
+        t("error.recording", { mimeType: mimeType, message: err.message })
       );
     });
 }
@@ -743,10 +743,7 @@ async function getUSBCameraStream() {
   } catch (err) {
     console.error(err);
     alert(
-      `Errore connessione alla telecamera USB.\n\n` +
-        `Assicurati che l'app "USB Camera" sia attiva con il server HTTP avviato.\n\n` +
-        `URL: ${streamUrl}\n\n` +
-        `Errore: ${err.message}`
+      t("camera.usb_error", { url: streamUrl, message: err.message })
     );
   }
 }
@@ -923,21 +920,35 @@ function addUSBCameraOption() {
   if (usbCameraUrl) radio.checked = true;
 
   label.appendChild(radio);
-  label.appendChild(
-    document.createTextNode("Telecamera USB via app (Android)")
-  );
+  label.appendChild(document.createTextNode(t("camera.usb_option")));
   container.appendChild(label);
 
   const hint = document.createElement("p");
   hint.className = "usb-camera-hint";
   hint.innerHTML =
-    'Richiede l\'app "USB Camera" attiva con server HTTP.<br/>' +
-    'URL: <input type="text" id="usbCameraUrl" value="' +
+    t("camera.usb_hint") + "<br/>" +
+    t("camera.usb_url_label") + ' <input type="text" id="usbCameraUrl" value="' +
     (usbCameraUrl || "http://localhost:8081") +
     '" class="white-input usb-camera-url-input" />';
   container.appendChild(hint);
 
   cameraSelectDiv.appendChild(container);
+}
+
+// ! Language selector
+function initLanguageSelector() {
+  const langSelect = document.getElementById("language-select");
+  if (langSelect) {
+    langSelect.addEventListener("change", (e) => {
+      setLanguage(e.target.value);
+    });
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initLanguageSelector);
+} else {
+  initLanguageSelector();
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1277,7 +1288,7 @@ deleteFormElement.addEventListener("submit", (e) => {
     db = null;
     deleteDatabase(() => (window.location.search = window.location.search));
   } else {
-    alert(`Hai scritto male la parola ${keyWord}, riprova.`);
+    alert(t("delete.wrong_keyword", { keyword: keyWord }));
   }
 });
 
@@ -1299,7 +1310,7 @@ function setDownloadProgress(text) {
 
 function saveVideo() {
   if (!startTimestamp || !lastTimestamp) {
-    alert("Nessun video registrato.");
+    alert(t("error.no_video"));
     return;
   }
 
@@ -1309,7 +1320,7 @@ function saveVideo() {
     getNearestBlobByTimestamp(lastTimestamp, streamCollectionName, (blob2, ts2, endId) => {
       getBlobsInRange(startId, endId, streamCollectionName, (blobs) => {
         if (!blobs || !blobs.length) {
-          alert("Nessun blob trovato per il download.");
+          alert(t("error.no_blob"));
           setDownloadProgress(null);
           return;
         }
