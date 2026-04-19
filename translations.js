@@ -61,12 +61,7 @@ const TRANSLATIONS = {
       no_video: "Nessun video registrato.",
       no_blob: "Nessun blob trovato per il download.",
     },
-    camera: {
-      usb_option: "Telecamera USB via app (Android)",
-      usb_hint: 'Richiede l\'app "USB Camera" attiva con server HTTP.',
-      usb_url_label: "URL:",
-      usb_error: "Errore connessione alla telecamera USB.\n\nAssicurati che l'app \"USB Camera\" sia attiva con il server HTTP avviato.\n\nURL: {url}\n\nErrore: {message}",
-    },
+
     player: {
       live: "LIVE",
       speed: "1x",
@@ -151,12 +146,7 @@ const TRANSLATIONS = {
       no_video: "No video recorded.",
       no_blob: "No blob found for download.",
     },
-    camera: {
-      usb_option: "USB Camera via app (Android)",
-      usb_hint: 'Requires the "USB Camera" app active with HTTP server.',
-      usb_url_label: "URL:",
-      usb_error: "Error connecting to USB camera.\n\nMake sure the \"USB Camera\" app is active with the HTTP server running.\n\nURL: {url}\n\nError: {message}",
-    },
+
     player: {
       live: "LIVE",
       speed: "1x",
@@ -241,12 +231,7 @@ const TRANSLATIONS = {
       no_video: "Kein Video aufgenommen.",
       no_blob: "Kein Blob zum Herunterladen gefunden.",
     },
-    camera: {
-      usb_option: "USB-Kamera über App (Android)",
-      usb_hint: 'Erfordert die "USB Camera" App mit aktivem HTTP-Server.',
-      usb_url_label: "URL:",
-      usb_error: "Fehler beim Verbinden mit der USB-Kamera.\n\nStellen Sie sicher, dass die \"USB Camera\" App mit dem laufenden HTTP-Server aktiv ist.\n\nURL: {url}\n\nFehler: {message}",
-    },
+
     player: {
       live: "LIVE",
       speed: "1x",
