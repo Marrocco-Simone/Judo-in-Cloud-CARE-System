@@ -19,7 +19,6 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
-const usbCameraUrl = urlParams.get("usbCameraUrl");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -105,14 +104,7 @@ function setNewQueryParams(e) {
     `input[name=camera-select]:checked`
   );
   const selectedValue = cameraSelect ? cameraSelect.value : "";
-  if (selectedValue === "__USB_HTTP__") {
-    const usbUrl = document.getElementById("usbCameraUrl");
-    newParams.set("usbCameraUrl", usbUrl ? usbUrl.value : "http://localhost:8081");
-    newParams.delete("deviceId");
-  } else {
-    newParams.set("deviceId", selectedValue);
-    newParams.delete("usbCameraUrl");
-  }
+  newParams.set("deviceId", selectedValue);
 
   // window.location.search = newParams.toString();
   window.location.href = `camera.html?${newParams.toString()}`;
@@ -197,45 +189,7 @@ function listAllCameraDevices() {
       label.appendChild(labelText);
       cameraSelectDiv.appendChild(label);
     });
-
-    addUSBCameraOption();
   });
-}
-
-function addUSBCameraOption() {
-  if (cameraSelectDiv.querySelector("#usbCameraOption")) return;
-
-  const container = document.createElement("div");
-  container.id = "usbCameraOption";
-  container.className = "usb-camera-option";
-
-  const hr = document.createElement("hr");
-  container.appendChild(hr);
-
-  const label = document.createElement("label");
-  label.className = "camera-select-radio-label";
-
-  const radio = document.createElement("input");
-  radio.type = "radio";
-  radio.name = "camera-select";
-  radio.value = "__USB_HTTP__";
-  radio.className = "camera-radio-input";
-  if (usbCameraUrl) radio.checked = true;
-
-  label.appendChild(radio);
-  label.appendChild(document.createTextNode(t("camera.usb_option")));
-  container.appendChild(label);
-
-  const hint = document.createElement("p");
-  hint.className = "usb-camera-hint";
-  hint.innerHTML =
-    t("camera.usb_hint") + "<br/>" +
-    t("camera.usb_url_label") + ' <input type="text" id="usbCameraUrl" value="' +
-    (usbCameraUrl || "http://localhost:8081") +
-    '" class="white-input usb-camera-url-input" />';
-  container.appendChild(hint);
-
-  cameraSelectDiv.appendChild(container);
 }
 
 // ! Language selector
