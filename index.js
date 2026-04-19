@@ -14,7 +14,7 @@ const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
 const DELAY_MULTIPLIER = Number(urlParams.get("DELAY_MULTIPLIER"))
   ? Number(urlParams.get("DELAY_MULTIPLIER"))
   : 3;
-const useAudio = urlParams.get("useAudio") === "false" ? false : true;
+const useAudio = urlParams.get("useAudio") === "true" ? true : false;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
@@ -104,14 +104,7 @@ function setNewQueryParams(e) {
     `input[name=camera-select]:checked`
   );
   const selectedValue = cameraSelect ? cameraSelect.value : "";
-  if (selectedValue === "__USB_HTTP__") {
-    const usbUrl = document.getElementById("usbCameraUrl");
-    newParams.set("usbCameraUrl", usbUrl ? usbUrl.value : "http://localhost:8081");
-    newParams.delete("deviceId");
-  } else {
-    newParams.set("deviceId", selectedValue);
-    newParams.delete("usbCameraUrl");
-  }
+  newParams.set("deviceId", selectedValue);
 
   // window.location.search = newParams.toString();
   window.location.href = `camera.html?${newParams.toString()}`;
@@ -165,7 +158,7 @@ function getWebcamStream() {
     .catch((err) => {
       console.error(err);
       alert(
-        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).\n\nErrore: ${err.message}`
+        t("error.recording", { mimeType: mimeType, message: err.message })
       );
     });
 }
@@ -196,8 +189,6 @@ function listAllCameraDevices() {
       label.appendChild(labelText);
       cameraSelectDiv.appendChild(label);
     });
-
-    addUSBCameraOption();
   });
 }
 
@@ -251,4 +242,20 @@ function addUSBCameraOption() {
   container.appendChild(hint);
 
   cameraSelectDiv.appendChild(container);
+}
+
+// ! Language selector
+function initLanguageSelector() {
+  const langSelect = document.getElementById("language-select");
+  if (langSelect) {
+    langSelect.addEventListener("change", (e) => {
+      setLanguage(e.target.value);
+    });
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initLanguageSelector);
+} else {
+  initLanguageSelector();
 }

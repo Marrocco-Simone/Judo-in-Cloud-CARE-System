@@ -14,12 +14,11 @@ const REFRESHRATE = Number(urlParams.get("REFRESHRATE"))
 const DELAY_MULTIPLIER = Number(urlParams.get("DELAY_MULTIPLIER"))
   ? Number(urlParams.get("DELAY_MULTIPLIER"))
   : 3;
-const useAudio = urlParams.get("useAudio") === "false" ? false : true;
+const useAudio = urlParams.get("useAudio") === "true" ? true : false;
 const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
-const usbCameraUrl = urlParams.get("usbCameraUrl");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -28,7 +27,6 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
-  usbCameraUrl,
 });
 
 /** @type {HTMLInputElement} */
@@ -106,14 +104,7 @@ function setNewQueryParams(e) {
     `input[name=camera-select]:checked`
   );
   const selectedValue = cameraSelect ? cameraSelect.value : "";
-  if (selectedValue === "__USB_HTTP__") {
-    const usbUrl = document.getElementById("usbCameraUrl");
-    newParams.set("usbCameraUrl", usbUrl ? usbUrl.value : "http://localhost:8081");
-    newParams.delete("deviceId");
-  } else {
-    newParams.set("deviceId", selectedValue);
-    newParams.delete("usbCameraUrl");
-  }
+  newParams.set("deviceId", selectedValue);
 
   window.location.search = newParams.toString();
 }
@@ -128,10 +119,9 @@ resetButtonElement.addEventListener("click", () => {
   window.location.search = "";
 });
 
-const mimeType =
-  useAudio && !usbCameraUrl
-    ? 'video/webm; codecs="vp8, opus"'
-    : 'video/webm; codecs="vp8"';
+const mimeType = useAudio
+  ? 'video/webm; codecs="vp8, opus"'
+  : 'video/webm; codecs="vp8"';
 
 const millionFormatter = new Intl.NumberFormat(undefined, {
   notation: "scientific",
@@ -647,11 +637,7 @@ function moveToTimestamp(timestamp) {
 let streamMediaRecorder;
 
 let videoTrackLabel;
-if (usbCameraUrl) {
-  getUSBCameraStream();
-} else {
-  getWebcamStream();
-}
+getWebcamStream();
 
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
 function getWebcamStream() {
@@ -700,134 +686,9 @@ function getWebcamStream() {
     .catch((err) => {
       console.error(err);
       alert(
-        `Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: ${mimeType}).\n\nErrore: ${err.message}`
+        t("error.recording", { mimeType: mimeType, message: err.message })
       );
     });
-}
-
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// * USB CAMERA VIA HTTP STREAM (MJPEG)
-
-async function getUSBCameraStream() {
-  const canvas = document.getElementById("usbCameraCanvas");
-  const ctx = canvas.getContext("2d");
-  const streamUrl = usbCameraUrl.replace(/\/$/, "") + "/video";
-
-  try {
-    const response = await fetch(streamUrl);
-    const contentType = response.headers.get("content-type") || "";
-
-    if (!contentType.includes("multipart")) {
-      throw new Error(
-        `Lo stream non è MJPEG multipart (content-type: ${contentType})`
-      );
-    }
-
-    readMjpegStream(response.body, canvas, ctx);
-    await waitForFirstFrame(canvas);
-
-    const canvasMediaStream = canvas.captureStream(30);
-    videoTrackLabel = "USB Camera (HTTP)";
-    listAllCameraDevices();
-
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      throw new Error(`Mime type "${mimeType}" is not supported.`);
-    }
-
-    streamMediaRecorder = createMediaRecorder(
-      canvasMediaStream,
-      REFRESHRATE,
-      streamCollectionName
-    );
-    setTimeout(appendToSourceBuffer, REFRESHRATE * DELAY_MULTIPLIER);
-  } catch (err) {
-    console.error(err);
-    alert(
-      `Errore connessione alla telecamera USB.\n\n` +
-        `Assicurati che l'app "USB Camera" sia attiva con il server HTTP avviato.\n\n` +
-        `URL: ${streamUrl}\n\n` +
-        `Errore: ${err.message}`
-    );
-  }
-}
-
-/**
- * @param {ReadableStream} body
- * @param {HTMLCanvasElement} canvas
- * @param {CanvasRenderingContext2D} ctx
- */
-async function readMjpegStream(body, canvas, ctx) {
-  const reader = body.getReader();
-  let buffer = new Uint8Array(0);
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const newBuf = new Uint8Array(buffer.length + value.length);
-    newBuf.set(buffer);
-    newBuf.set(value, buffer.length);
-    buffer = newBuf;
-
-    let searchStart = 0;
-    while (searchStart < buffer.length - 1) {
-      let soiPos = -1;
-      for (let i = searchStart; i < buffer.length - 1; i++) {
-        if (buffer[i] === 0xff && buffer[i + 1] === 0xd8) {
-          soiPos = i;
-          break;
-        }
-      }
-      if (soiPos === -1) break;
-
-      let eoiPos = -1;
-      for (let i = soiPos + 2; i < buffer.length - 1; i++) {
-        if (buffer[i] === 0xff && buffer[i + 1] === 0xd9) {
-          eoiPos = i + 2;
-          break;
-        }
-      }
-      if (eoiPos === -1) break;
-
-      const jpegData = buffer.slice(soiPos, eoiPos);
-      const blob = new Blob([jpegData], { type: "image/jpeg" });
-      const bmp = await createImageBitmap(blob);
-      if (canvas.width !== bmp.width || canvas.height !== bmp.height) {
-        canvas.width = bmp.width;
-        canvas.height = bmp.height;
-      }
-      ctx.drawImage(bmp, 0, 0);
-      bmp.close();
-
-      searchStart = eoiPos;
-    }
-
-    if (searchStart > 0) {
-      buffer = buffer.slice(searchStart);
-    }
-  }
-}
-
-/** @param {HTMLCanvasElement} canvas */
-function waitForFirstFrame(canvas) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(
-        new Error(
-          "Nessun frame ricevuto dalla telecamera entro 10 secondi"
-        )
-      );
-    }, 10000);
-    const check = () => {
-      if (canvas.width > 0 && canvas.height > 0) {
-        clearTimeout(timeout);
-        resolve();
-      } else {
-        setTimeout(check, 50);
-      }
-    };
-    check();
-  });
 }
 
 /**
@@ -898,47 +759,23 @@ function listAllCameraDevices() {
       label.appendChild(labelText);
       cameraSelectDiv.appendChild(label);
     });
-
-    addUSBCameraOption();
   });
 }
 
-function addUSBCameraOption() {
-  if (cameraSelectDiv.querySelector("#usbCameraOption")) return;
+// ! Language selector
+function initLanguageSelector() {
+  const langSelect = document.getElementById("language-select");
+  if (langSelect) {
+    langSelect.addEventListener("change", (e) => {
+      setLanguage(e.target.value);
+    });
+  }
+}
 
-  const container = document.createElement("div");
-  container.id = "usbCameraOption";
-  container.className = "usb-camera-option";
-
-  const hr = document.createElement("hr");
-  container.appendChild(hr);
-
-  const label = document.createElement("label");
-  label.className = "camera-select-radio-label";
-
-  const radio = document.createElement("input");
-  radio.type = "radio";
-  radio.name = "camera-select";
-  radio.value = "__USB_HTTP__";
-  radio.className = "camera-radio-input";
-  if (usbCameraUrl) radio.checked = true;
-
-  label.appendChild(radio);
-  label.appendChild(
-    document.createTextNode("Telecamera USB via app (Android)")
-  );
-  container.appendChild(label);
-
-  const hint = document.createElement("p");
-  hint.className = "usb-camera-hint";
-  hint.innerHTML =
-    'Richiede l\'app "USB Camera" attiva con server HTTP.<br/>' +
-    'URL: <input type="text" id="usbCameraUrl" value="' +
-    (usbCameraUrl || "http://localhost:8081") +
-    '" class="white-input usb-camera-url-input" />';
-  container.appendChild(hint);
-
-  cameraSelectDiv.appendChild(container);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initLanguageSelector);
+} else {
+  initLanguageSelector();
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1278,7 +1115,7 @@ deleteFormElement.addEventListener("submit", (e) => {
     db = null;
     deleteDatabase(() => (window.location.search = window.location.search));
   } else {
-    alert(`Hai scritto male la parola ${keyWord}, riprova.`);
+    alert(t("delete.wrong_keyword", { keyword: keyWord }));
   }
 });
 
@@ -1300,7 +1137,7 @@ function setDownloadProgress(text) {
 
 function saveVideo() {
   if (!startTimestamp || !lastTimestamp) {
-    alert("Nessun video registrato.");
+    alert(t("error.no_video"));
     return;
   }
 
@@ -1310,7 +1147,7 @@ function saveVideo() {
     getNearestBlobByTimestamp(lastTimestamp, streamCollectionName, (blob2, ts2, endId) => {
       getBlobsInRange(startId, endId, streamCollectionName, (blobs) => {
         if (!blobs || !blobs.length) {
-          alert("Nessun blob trovato per il download.");
+          alert(t("error.no_blob"));
           setDownloadProgress(null);
           return;
         }

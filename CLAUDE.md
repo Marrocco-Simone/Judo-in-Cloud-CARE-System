@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The entire application runs offline in the browser — no data is sent to or received from any server after initial page load. It is hosted at `care.judoincloud.com` and also distributed as an Electron desktop app.
 
-Language: Italian (UI text and comments are in Italian).
+Language: Italian, English, German (UI now supports multiple languages via translations.js).
 
 ## Architecture
 

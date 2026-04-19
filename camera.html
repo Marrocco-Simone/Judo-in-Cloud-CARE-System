@@ -7,6 +7,7 @@
     <title>Judo in Cloud - Care System</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="jic_styles.css" />
+    <script src="translations.js" defer></script>
     <script src="mediabunny.min.js" defer></script>
     <script src="camera.js" defer></script>
 
@@ -130,7 +131,7 @@
 
         <div class="jic-top-links">
           <a href="https://www.judoincloud.com">
-            <button class="jic-top-link">Scopri Judo in Cloud</button>
+            <button class="jic-top-link" data-i18n="header.discover">Scopri Judo in Cloud</button>
           </a>
         </div>
       </header>
@@ -199,10 +200,10 @@
                 /
                 <div class="total-time">0:00</div>
                 <div class="live-dot"></div>
-                <button class="live-btn">LIVE</button>
+                <button class="live-btn" data-i18n="player.live">LIVE</button>
               </div>
 
-              <button class="speed-btn wide-btn">1x</button>
+              <button class="speed-btn wide-btn" data-i18n="player.speed">1x</button>
 
               <!-- TODO should always be theater -->
               <button class="theater-btn">
@@ -238,7 +239,6 @@
           </div>
 
           <video muted></video>
-          <canvas id="usbCameraCanvas" style="display:none;"></canvas>
 
           <div class="video-logo">
             <svg
@@ -329,23 +329,23 @@
         </div>
 
         <div class="download-bar">
-          <button class="white-btn download-btn">Download</button>
+          <button class="white-btn download-btn" data-i18n="player.download">Download</button>
           <span class="download-progress hidden"></span>
         </div>
 
         <!-- ! INSTRUCTIONS -->
         <div class="instruction-container">
           <div class="instruction-text">
-            <h2>Il CARE System di Judo in Cloud!</h2>
-            <h3>Veloce, leggero e semplicemente incredibile!</h3>
+            <h2 data-i18n="landing.title">Il CARE System di Judo in Cloud!</h2>
+            <h3 data-i18n="landing.subtitle">Veloce, leggero e semplicemente incredibile!</h3>
 
-            <p>
+            <p data-i18n-html="landing.description1">
               Abbiamo ideato per voi un incredibile CARE System:
               <em>Camera Assistant Referee Enhanced</em> (supporto camera per
               arbitri migliorato)!
             </p>
 
-            <p>
+            <p data-i18n="landing.description2">
               Il nostro programma è leggero, facile da usare, e idealmente non
               necessita di scaricare nulla. Si tratta di una pagina web
               contenente tutto il codice necessario per girare. Una volta aperta
@@ -353,7 +353,7 @@
               funzionerà anche senza connessione!
             </p>
 
-            <p>
+            <p data-i18n="landing.description3">
               Per semplificare il lavoro a tutti gli organizzatori ed arbitri,
               tuttavia, forniamo anche degli eseguibili da scaricare e aprire
               con un click!
@@ -365,16 +365,16 @@
               >https://github.com/Marrocco-Simone/Judo-in-Cloud-CARE-System/releases</a
             >
 
-            <p>
+            <p data-i18n="landing.description4">
               Il progetto è gratuito, open source e disponibile a tutti quelli
               che ne vogliano usufruire! Vogliamo aiutare il mondo del judo a
               progredire, e questo è il nostro contributo!
             </p>
 
             <p>
-              Se vuoi organizzare la tua gara di judo in modo semplice, sicuro e
-              moderno,
-              <a href="https://www.judoincloud.com" class="text-powderblue"
+              <span data-i18n="landing.description5">Se vuoi organizzare la tua gara di judo in modo semplice, sicuro e
+              moderno,</span>
+              <a href="https://www.judoincloud.com" class="text-powderblue" data-i18n="landing.visit_site"
                 >visita il nostro sito!</a
               >
             </p>
@@ -382,63 +382,63 @@
 
           <table class="instruction-table">
             <tr>
-              <th>Tasto</th>
-              <th>Azione</th>
+              <th data-i18n="shortcuts.title_key">Tasto</th>
+              <th data-i18n="shortcuts.title_action">Azione</th>
             </tr>
 
             <tr>
-              <td>Barra spaziatrice / K</td>
-              <td>Pausa / Riparti</td>
+              <td data-i18n="shortcuts.space">Barra spaziatrice / K</td>
+              <td data-i18n="shortcuts.pause">Pausa / Riparti</td>
             </tr>
             <tr>
-              <td>F</td>
-              <td>Schermo intero</td>
+              <td data-i18n="shortcuts.f">F</td>
+              <td data-i18n="shortcuts.fullscreen">Schermo intero</td>
             </tr>
             <tr>
-              <td>T</td>
-              <td>Modalita' teatro</td>
+              <td data-i18n="shortcuts.t">T</td>
+              <td data-i18n="shortcuts.theater">Modalita' teatro</td>
             </tr>
             <tr>
-              <td>M</td>
-              <td>Muta video</td>
+              <td data-i18n="shortcuts.m">M</td>
+              <td data-i18n="shortcuts.mute">Muta video</td>
             </tr>
             <tr>
-              <td>Frecce destra / sinistra</td>
-              <td>Avanti / indietro 5 secondi</td>
+              <td data-i18n="shortcuts.arrows">Frecce destra / sinistra</td>
+              <td data-i18n="shortcuts.seek_5s">Avanti / indietro 5 secondi</td>
             </tr>
             <tr>
-              <td>J / L</td>
-              <td>Avanti / indietro 3 minuti</td>
+              <td data-i18n="shortcuts.jl">J / L</td>
+              <td data-i18n="shortcuts.seek_3m">Avanti / indietro 3 minuti</td>
             </tr>
             <tr>
-              <td>Punto / Virgola</td>
-              <td>Avanti / indietro 1 frame</td>
+              <td data-i18n="shortcuts.dots">Punto / Virgola</td>
+              <td data-i18n="shortcuts.frame">Avanti / indietro 1 frame</td>
             </tr>
             <tr>
-              <td>P</td>
-              <td>Rallenta video / Torna normale</td>
+              <td data-i18n="shortcuts.p">P</td>
+              <td data-i18n="shortcuts.slow">Rallenta video / Torna normale</td>
             </tr>
             <tr>
-              <td>Backspace (freccia lunga a sinistra)</td>
-              <td>Torna live</td>
+              <td data-i18n="shortcuts.backspace">Backspace (freccia lunga a sinistra)</td>
+              <td data-i18n="shortcuts.return_live">Torna live</td>
             </tr>
           </table>
         </div>
 
         <!-- ! QUERY VIDEO PARAMS FORM -->
         <form id="queryFormElement" class="query-form-element">
-          <h3>Impostazioni registrazione</h3>
+          <h3 data-i18n="settings.title">Impostazioni registrazione</h3>
           <div class="query-form-buttons">
-            <button id="submitButton" type="submit">Conferma</button>
-            <button id="resetButton" type="button">Reset</button>
+            <button id="submitButton" type="submit" data-i18n="settings.confirm">Conferma</button>
+            <button id="resetButton" type="button" data-i18n="settings.reset">Reset</button>
           </div>
           <div class="camera-select-div">
-            <h4>Cameras</h4>
-            <p class="camera-select-placeholder">Loading cameras...</p>
+            <h4 data-i18n="settings.cameras">Cameras</h4>
+            <p class="camera-select-placeholder" data-i18n="settings.cameras_loading">Loading cameras...</p>
           </div>
           <hr />
           <label>
-            <p>Bitrate [<span id="videoBitsInputValue"></span>]</p>
+            <p><span data-i18n="settings.bitrate">Bitrate</span> [<span id="videoBitsInputValue"></span>]</p>
             <input
               id="videoBitsInput"
               class="white-slider"
@@ -449,11 +449,11 @@
             />
           </label>
           <label>
-            <p>Usa audio</p>
+            <p data-i18n="settings.use_audio">Usa audio</p>
             <input id="useAudioInput" type="checkbox" />
           </label>
           <label>
-            <p>Frame size [<span id="refreshRateInputValue"></span>]</p>
+            <p><span data-i18n="settings.frame_size">Frame size</span> [<span id="refreshRateInputValue"></span>]</p>
             <input
               id="refreshRateInput"
               class="white-slider"
@@ -464,12 +464,12 @@
             />
           </label>
           <label>
-            <p>More video info</p>
+            <p data-i18n="settings.more_info">More video info</p>
             <input id="showMoreVideoInfoInput" type="checkbox" />
           </label>
           <label>
             <p>
-              Moltiplicatore ritardo [<span
+              <span data-i18n="settings.delay_multiplier">Moltiplicatore ritardo</span> [<span
                 id="delayMultiplierInputValue"
               ></span
               >]
@@ -484,7 +484,7 @@
             />
           </label>
           <label>
-            <p>Log database operations</p>
+            <p data-i18n="settings.log_db">Log database operations</p>
             <input id="logDatabaseOpInput" type="checkbox" />
           </label>
         </form>
@@ -492,21 +492,21 @@
         <!-- ! DELETE ALL DATA FORM -->
         <form class="delete-all-data-form">
           <label class="delete-all-data-text" for="deleteAllDataInput">
-            <strong>Cancella tutto il video registrato</strong>
-            <em>Scrivi "Elimina" per pulire il database</em>
+            <strong data-i18n="delete.title">Cancella tutto il video registrato</strong>
+            <em data-i18n="delete.confirm_text">Scrivi "Elimina" per pulire il database</em>
           </label>
           <input id="deleteAllDataInput" class="white-input" type="text" />
-          <button class="white-btn" type="submit">Elimina</button>
+          <button class="white-btn" type="submit" data-i18n="delete.button">Elimina</button>
         </form>
       </main>
 
       <!-- ! FOOTER -->
       <footer class="jic-footer">
-        <h3 class="jic-footer-title">Judo in Cloud</h3>
-        <h4 class="jic-footer-subtitle">Un servizio fatto su misura per te!</h4>
+        <h3 class="jic-footer-title" data-i18n="footer.title">Judo in Cloud</h3>
+        <h4 class="jic-footer-subtitle" data-i18n="footer.subtitle">Un servizio fatto su misura per te!</h4>
         <address class="jic-footer-adress">
           <div class="jic-footer-adress-column">
-            <h4>Contatti</h4>
+            <h4 data-i18n="footer.contacts">Contatti</h4>
             <a
               href="mailto:info@judoincloud.com"
               target="_blank"
@@ -534,7 +534,7 @@
             >
           </div>
           <div class="jic-footer-adress-column">
-            <h4>In collaborazione con</h4>
+            <h4 data-i18n="footer.collaboration">In collaborazione con</h4>
             <a
               href="https://www.judolavis.it"
               target="_blank"
@@ -550,7 +550,7 @@
             >
           </div>
           <div class="jic-footer-adress-column">
-            <h4>Si ringraziano</h4>
+            <h4 data-i18n="footer.thanks">Si ringraziano</h4>
             <a
               href="https://github.com/ecstt"
               target="_blank"
@@ -578,35 +578,39 @@
             >
           </div>
           <div class="jic-footer-adress-column">
-            <h4>FAQ</h4>
+            <h4 data-i18n="footer.faq">FAQ</h4>
             <a
               href="https://www.judoincloud.com/faq/vantaggi"
               target="_blank"
               rel="noopener noreferrer"
               class="text-powderblue"
+              data-i18n="footer.benefits"
               >Vantaggi</a
             ><a
               href="https://www.judoincloud.com/faq/iniziare"
               target="_blank"
               rel="noopener noreferrer"
               class="text-powderblue"
+              data-i18n="footer.getting_started"
               >Iniziare</a
             ><a
               href="https://www.judoincloud.com/faq/allenatore"
               target="_blank"
               rel="noopener noreferrer"
               class="text-powderblue"
+              data-i18n="footer.coaches"
               >Per gli allenatori</a
             ><a
               href="https://www.judoincloud.com/faq/gdpr"
               target="_blank"
               rel="noopener noreferrer"
               class="text-powderblue"
+              data-i18n="footer.privacy"
               >Informativa Privacy</a
             >
           </div>
           <div class="jic-footer-adress-column">
-            <h4>Social</h4>
+            <h4 data-i18n="footer.social">Social</h4>
             <a
               href="https://www.facebook.com/people/Judo-in-Cloud/61555481962924/"
               target="_blank"
@@ -620,6 +624,14 @@
               class="text-powderblue"
               >Instagram</a
             >
+          </div>
+          <div class="jic-footer-adress-column language-selector-column">
+            <h4 data-i18n="footer.language">Lingua</h4>
+            <select id="language-select" class="language-select">
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="de">🇩🇪 Deutsch</option>
+            </select>
           </div>
         </address>
       </footer>
