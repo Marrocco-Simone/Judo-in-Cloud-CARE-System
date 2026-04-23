@@ -198,14 +198,14 @@ function openDbConnection() {
       const firstTimestamp = timestamp;
       getLastBlob(streamCollectionName, (blob, timestamp, id) => {
         const lastId = id;
-        const lastTimestamp = timestamp;
+        const lastTs = timestamp;
         console.log("First blob:", {
           id: firstId,
           timestamp: formatTimestamp(firstTimestamp),
         });
         console.log("Last blob:", {
           id: lastId,
-          timestamp: formatTimestamp(lastTimestamp),
+          timestamp: formatTimestamp(lastTs),
         });
         console.log(
           `Expected total size: ${Math.floor(
@@ -213,7 +213,9 @@ function openDbConnection() {
           )} Mb`
         );
         startTimestamp = firstTimestamp;
+        lastTimestamp = lastTs;
         i = lastId;
+        updateDownloadTimeInputs();
       });
     });
 
@@ -265,6 +267,7 @@ function storeBlob(blob, collectionName, cb) {
     }
     if (!startTimestamp) startTimestamp = timestamp;
     lastTimestamp = timestamp;
+    updateDownloadTimeInputs();
     if (cb) cb();
   });
 }
@@ -1121,7 +1124,30 @@ deleteFormElement.addEventListener("submit", (e) => {
 // * save video
 const downloadBtn = document.querySelector(".download-btn");
 const downloadProgress = document.querySelector(".download-progress");
+const downloadAllCheckbox = document.querySelector(".download-all-checkbox");
+const downloadStartTime = document.querySelector(".download-start-time");
+const downloadEndTime = document.querySelector(".download-end-time");
+
 downloadBtn.addEventListener("click", saveVideo);
+
+downloadAllCheckbox.addEventListener("change", () => {
+  const disabled = downloadAllCheckbox.checked;
+  downloadStartTime.disabled = disabled;
+  downloadEndTime.disabled = disabled;
+});
+
+function updateDownloadTimeInputs() {
+  if (!startTimestamp || !lastTimestamp) return;
+  downloadStartTime.value = formatTimestamp(startTimestamp);
+  downloadEndTime.value = formatTimestamp(lastTimestamp);
+}
+
+function parseTimeInputToTimestamp(timeValue, baseTimestamp) {
+  const [hours, minutes, seconds] = timeValue.split(":").map(Number);
+  const date = new Date(baseTimestamp);
+  date.setHours(hours, minutes, seconds || 0, 0);
+  return date.getTime();
+}
 
 function setDownloadProgress(text) {
   if (text) {
@@ -1140,10 +1166,26 @@ function saveVideo() {
     return;
   }
 
+  let downloadStart = startTimestamp;
+  let downloadEnd = lastTimestamp;
+
+  if (!downloadAllCheckbox.checked) {
+    downloadStart = parseTimeInputToTimestamp(downloadStartTime.value, startTimestamp);
+    downloadEnd = parseTimeInputToTimestamp(downloadEndTime.value, startTimestamp);
+
+    if (downloadStart >= downloadEnd) {
+      alert(t("player.download_invalid_range"));
+      return;
+    }
+
+    if (downloadStart < startTimestamp) downloadStart = startTimestamp;
+    if (downloadEnd > lastTimestamp) downloadEnd = lastTimestamp;
+  }
+
   setDownloadProgress("Raccolta blob...");
 
-  getNearestBlobByTimestamp(startTimestamp, streamCollectionName, (blob, ts, startId) => {
-    getNearestBlobByTimestamp(lastTimestamp, streamCollectionName, (blob2, ts2, endId) => {
+  getNearestBlobByTimestamp(downloadStart, streamCollectionName, (blob, ts, startId) => {
+    getNearestBlobByTimestamp(downloadEnd, streamCollectionName, (blob2, ts2, endId) => {
       getBlobsInRange(startId, endId, streamCollectionName, (blobs) => {
         if (!blobs || !blobs.length) {
           alert(t("error.no_blob"));
@@ -1151,7 +1193,7 @@ function saveVideo() {
           return;
         }
 
-        const filename = `video_${formatTimestamp(startTimestamp).replaceAll(":", "-")}_${formatTimestamp(lastTimestamp).replaceAll(":", "-")}.mp4`;
+        const filename = `video_${formatTimestamp(downloadStart).replaceAll(":", "-")}_${formatTimestamp(downloadEnd).replaceAll(":", "-")}.mp4`;
         setDownloadProgress(`Conversione 0/${blobs.length}...`);
 
         convertBlobsToMp4(blobs, filename).catch((err) => {

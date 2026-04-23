@@ -489,6 +489,41 @@ video {
   align-items: center;
   padding: 0 1rem;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.download-all-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #0b5e76;
+  cursor: pointer;
+}
+
+.download-all-checkbox {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.download-time-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #0b5e76;
+}
+
+.download-time-label input[type="time"] {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #0b5e76;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.download-time-label input[type="time"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f0f0f0;
 }
 
 .white-btn {
