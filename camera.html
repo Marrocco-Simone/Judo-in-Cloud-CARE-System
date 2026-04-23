@@ -329,6 +329,18 @@
         </div>
 
         <div class="download-bar">
+          <label class="download-all-label">
+            <input type="checkbox" class="download-all-checkbox" checked />
+            <span data-i18n="player.download_all">Download all</span>
+          </label>
+          <label class="download-time-label">
+            <span data-i18n="player.download_start">Start</span>
+            <input type="time" class="download-start-time" step="1" disabled />
+          </label>
+          <label class="download-time-label">
+            <span data-i18n="player.download_end">End</span>
+            <input type="time" class="download-end-time" step="1" disabled />
+          </label>
           <button class="white-btn download-btn" data-i18n="player.download">Download</button>
           <span class="download-progress hidden"></span>
         </div>

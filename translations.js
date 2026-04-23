@@ -66,6 +66,10 @@ const TRANSLATIONS = {
       live: "LIVE",
       speed: "1x",
       download: "Download",
+      download_all: "Scarica tutto",
+      download_start: "Inizio",
+      download_end: "Fine",
+      download_invalid_range: "Intervallo non valido: l'inizio deve essere prima della fine.",
     },
     shortcuts: {
       title_key: "Tasto",
@@ -151,6 +155,10 @@ const TRANSLATIONS = {
       live: "LIVE",
       speed: "1x",
       download: "Download",
+      download_all: "Download all",
+      download_start: "Start",
+      download_end: "End",
+      download_invalid_range: "Invalid range: start must be before end.",
     },
     shortcuts: {
       title_key: "Key",
@@ -236,6 +244,10 @@ const TRANSLATIONS = {
       live: "LIVE",
       speed: "1x",
       download: "Herunterladen",
+      download_all: "Alles herunterladen",
+      download_start: "Anfang",
+      download_end: "Ende",
+      download_invalid_range: "Ungültiger Bereich: Der Anfang muss vor dem Ende liegen.",
     },
     shortcuts: {
       title_key: "Taste",
