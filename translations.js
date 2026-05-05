@@ -70,6 +70,8 @@ const TRANSLATIONS = {
       download_start: "Inizio",
       download_end: "Fine",
       download_invalid_range: "Intervallo non valido: l'inizio deve essere prima della fine.",
+      download_too_long: "Il download dal browser e' limitato a clip di massimo {maxMinutes} minuti. Per il video completo usa lo script ffmpeg offline.",
+      download_failed: "Non e' stato possibile creare il file WebM. Prova con una clip piu' corta o usa lo script ffmpeg offline.",
     },
     shortcuts: {
       title_key: "Tasto",
@@ -159,6 +161,8 @@ const TRANSLATIONS = {
       download_start: "Start",
       download_end: "End",
       download_invalid_range: "Invalid range: start must be before end.",
+      download_too_long: "Browser download is limited to clips up to {maxMinutes} minutes. Use the offline ffmpeg script for the full video.",
+      download_failed: "Could not create the WebM file. Try a shorter clip or use the offline ffmpeg script.",
     },
     shortcuts: {
       title_key: "Key",
@@ -248,6 +252,8 @@ const TRANSLATIONS = {
       download_start: "Anfang",
       download_end: "Ende",
       download_invalid_range: "Ungültiger Bereich: Der Anfang muss vor dem Ende liegen.",
+      download_too_long: "Der Browser-Download ist auf Clips bis {maxMinutes} Minuten begrenzt. Verwenden Sie das Offline-ffmpeg-Skript fuer das vollstaendige Video.",
+      download_failed: "Die WebM-Datei konnte nicht erstellt werden. Versuchen Sie einen kuerzeren Clip oder verwenden Sie das Offline-ffmpeg-Skript.",
     },
     shortcuts: {
       title_key: "Taste",
