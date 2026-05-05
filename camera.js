@@ -123,6 +123,8 @@ const mimeType = useAudio
   ? 'video/webm; codecs="vp8, opus"'
   : 'video/webm; codecs="vp8"';
 
+const MAX_BROWSER_DOWNLOAD_DURATION = 15 * 60 * 1000;
+
 const millionFormatter = new Intl.NumberFormat(undefined, {
   notation: "scientific",
 });
@@ -1182,6 +1184,15 @@ function saveVideo() {
     if (downloadEnd > lastTimestamp) downloadEnd = lastTimestamp;
   }
 
+  if (downloadEnd - downloadStart > MAX_BROWSER_DOWNLOAD_DURATION) {
+    alert(
+      t("player.download_too_long", {
+        maxMinutes: MAX_BROWSER_DOWNLOAD_DURATION / 60 / 1000,
+      })
+    );
+    return;
+  }
+
   setDownloadProgress("Raccolta blob...");
 
   getNearestBlobByTimestamp(downloadStart, streamCollectionName, (blob, ts, startId) => {
@@ -1193,15 +1204,11 @@ function saveVideo() {
           return;
         }
 
-        const filename = `video_${formatTimestamp(downloadStart).replaceAll(":", "-")}_${formatTimestamp(downloadEnd).replaceAll(":", "-")}.mp4`;
-        setDownloadProgress(`Conversione 0/${blobs.length}...`);
+        const filename = `video_${formatTimestamp(downloadStart).replaceAll(":", "-")}_${formatTimestamp(downloadEnd).replaceAll(":", "-")}.webm`;
 
-        convertBlobsToMp4(blobs, filename).catch((err) => {
-          console.error("Errore conversione MP4, fallback WebM:", err);
-          setDownloadProgress("Fallback WebM...");
-          const webmBlob = new Blob(blobs, { type: mimeType });
-          const webmFilename = filename.replace(".mp4", ".webm");
-          triggerDownload(webmBlob, webmFilename);
+        assembleBlobsToWebm(blobs, filename).catch((err) => {
+          console.error("Errore creazione WebM:", err);
+          alert(t("player.download_failed"));
           setDownloadProgress(null);
         });
       });
@@ -1210,29 +1217,42 @@ function saveVideo() {
 }
 
 /**
- * Convert an array of WebM blobs into a single MP4 file using MediaBunny
+ * Assemble WebM chunks into one clean WebM file using MediaBunny.
  * @param {Blob[]} blobs
  * @param {string} filename
  */
-async function convertBlobsToMp4(blobs, filename) {
+async function assembleBlobsToWebm(blobs, filename) {
+  if (!window.Mediabunny) {
+    throw new Error("MediaBunny is not loaded.");
+  }
+
   const {
-    Input, Output, BlobSource, BufferTarget,
-    Mp4OutputFormat, ALL_FORMATS, EncodedPacketSink,
-    EncodedVideoPacketSource, EncodedAudioPacketSource,
-  } = Mediabunny;
+    Input,
+    Output,
+    BlobSource,
+    BufferTarget,
+    MkvOutputFormat,
+    ALL_FORMATS,
+    EncodedPacketSink,
+    EncodedVideoPacketSource,
+    EncodedAudioPacketSource,
+  } = window.Mediabunny;
 
   const target = new BufferTarget();
   const output = new Output({
-    format: new Mp4OutputFormat(),
+    format: new MkvOutputFormat(),
     target,
   });
 
-  const firstInput = new Input({ formats: ALL_FORMATS, source: new BlobSource(blobs[0]) });
+  const firstInput = new Input({
+    formats: ALL_FORMATS,
+    source: new BlobSource(blobs[0]),
+  });
   const firstVideoTrack = await firstInput.getPrimaryVideoTrack();
   const firstAudioTrack = await firstInput.getPrimaryAudioTrack();
 
   if (!firstVideoTrack) {
-    throw new Error("Nessuna traccia video trovata nel primo blob");
+    throw new Error("Nessuna traccia video trovata nel primo blob.");
   }
 
   const videoSource = new EncodedVideoPacketSource(firstVideoTrack.codec);
@@ -1250,9 +1270,12 @@ async function convertBlobsToMp4(blobs, filename) {
   let audioTimeOffset = 0;
 
   for (let idx = 0; idx < blobs.length; idx++) {
-    setDownloadProgress(`Conversione ${idx + 1}/${blobs.length}...`);
+    setDownloadProgress(`Creazione WebM ${idx + 1}/${blobs.length}...`);
 
-    const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(blobs[idx]) });
+    const input = new Input({
+      formats: ALL_FORMATS,
+      source: new BlobSource(blobs[idx]),
+    });
     const videoTrack = await input.getPrimaryVideoTrack();
 
     if (videoTrack) {
@@ -1284,11 +1307,11 @@ async function convertBlobsToMp4(blobs, filename) {
   videoSource.close();
   if (audioSource) audioSource.close();
 
-  setDownloadProgress("Finalizzazione...");
+  setDownloadProgress("Finalizzazione WebM...");
   await output.finalize();
 
-  const mp4Blob = new Blob([target.buffer], { type: "video/mp4" });
-  triggerDownload(mp4Blob, filename);
+  const webmBlob = new Blob([target.buffer], { type: "video/webm" });
+  triggerDownload(webmBlob, filename);
   setDownloadProgress(null);
 }
 
