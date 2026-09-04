@@ -205,6 +205,15 @@
 
               <button class="speed-btn wide-btn" data-i18n="player.speed">1x</button>
 
+              <button class="scoreboard-btn" data-i18n-title="player.scoreboard_key" style="display: none">
+                <svg viewBox="0 0 24 24" style="width: 24px; height: 24px">
+                  <path
+                    fill="currentColor"
+                    d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 15h6v2H5zm8 0h6v2h-6zm-8-4h6v2H5zm8 0h6v2h-6zM5 7h14v2H5z"
+                  />
+                </svg>
+              </button>
+
               <!-- TODO should always be theater -->
               <button class="theater-btn">
                 <svg class="theater-off-icon" viewBox="0 0 24 24">
@@ -434,6 +443,10 @@
               <td data-i18n="shortcuts.backspace">Backspace (freccia lunga a sinistra)</td>
               <td data-i18n="shortcuts.return_live">Torna live</td>
             </tr>
+            <tr>
+              <td data-i18n="shortcuts.s">S</td>
+              <td data-i18n="shortcuts.scoreboard">Mostra / nascondi tabellone live</td>
+            </tr>
           </table>
         </div>
 
@@ -498,6 +511,15 @@
           <label>
             <p data-i18n="settings.log_db">Log database operations</p>
             <input id="logDatabaseOpInput" type="checkbox" />
+          </label>
+          <hr />
+          <label>
+            <p data-i18n="settings.live_slug">Competition slug</p>
+            <input id="slugInput" class="white-input" type="text" data-i18n-placeholder="settings.live_slug_placeholder" />
+          </label>
+          <label>
+            <p data-i18n="settings.live_tatami">Tatami number</p>
+            <input id="tatamiInput" class="white-input" type="number" min="1" step="1" />
           </label>
         </form>
 
