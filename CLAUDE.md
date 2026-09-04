@@ -28,7 +28,7 @@ This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no fr
 - **IndexedDB** (`blobStoreDB`): One object store — `streamBlobs` (small chunks at REFRESHRATE for live playback). Blobs are keyed by auto-increment id with a timestamp index.
 - **MediaSource API**: A `SourceBuffer` in `sequence` mode receives blobs from IndexedDB one-by-one on a timer. Buffer is capped at `MAXTIME` seconds to prevent RAM overflow.
 - **Single MediaRecorder**: Records the webcam stream at REFRESHRATE intervals, storing WebM blobs to IndexedDB.
-- **MP4 Download**: Uses MediaBunny (`mediabunny.min.js`) to convert a range of WebM blobs from IndexedDB into a single MP4 file for download.
+- **WebM Download**: Uses MediaBunny (`mediabunny.min.js`) to remux a time range of WebM blobs from IndexedDB into one WebM file, without re-encoding. With the File System API the file streams to disk through `showSaveFilePicker`; otherwise it is built in RAM with a 15-minute cap.
 - **Zoom/Pan**: CSS variables (`--zoom`, `--y-axis`, `--x-axis`) on the `<video>` element, manipulated via mouse wheel (position-dependent zoom) and right-click drag.
 - **Blob prefetch/cache**: Blobs are prefetched from IndexedDB ahead of playback position to reduce latency during rewind and seek operations.
 

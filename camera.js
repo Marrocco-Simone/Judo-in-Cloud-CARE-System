@@ -367,8 +367,9 @@ function getBlobById(id, collectionName, cb, errorCb) {
  * @param {number} targetTimestamp
  * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number, id: number) => void} cb
+ * @param {() => void} [errorCb]
  */
-function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
+function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb, errorCb) {
   const transaction = db.transaction([collectionName], "readonly");
   const blobStore = transaction.objectStore(collectionName);
   const index = blobStore.index("timestamp");
@@ -376,6 +377,7 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
   const cursorRequest = index.openCursor(null, "prev");
   cursorRequest.addEventListener("error", (e) => {
     console.error("Error searching by timestamp:", e.target.errorCode);
+    if (errorCb) errorCb();
   });
   cursorRequest.addEventListener("success", (e) => {
     /**   @type {IDBCursorWithValue} */
@@ -393,6 +395,7 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
       }
     } else {
       console.error("No blobs found with a timestamp <=", targetTimestamp);
+      if (errorCb) errorCb();
     }
   });
 }
@@ -402,21 +405,27 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
  * @param {number} endId
  * @param {string} collectionName
  * @param {(blobs: Blob[]) => void} cb
+ * @param {() => void} [errorCb]
  */
-function getBlobsInRange(startId, endId, collectionName, cb) {
+function getBlobsInRange(startId, endId, collectionName, cb, errorCb) {
   const transaction = db.transaction([collectionName], "readonly");
   const blobStore = transaction.objectStore(collectionName);
 
   const request = blobStore.getAll(IDBKeyRange.bound(startId, endId));
-  request.addEventListener("error", (e) =>
-    console.error("Error retrieving blobs:", e.target.errorCode)
-  );
+  request.addEventListener("error", (e) => {
+    console.error("Error retrieving blobs:", e.target.errorCode);
+    if (errorCb) errorCb();
+  });
   request.addEventListener("success", (e) => {
     /** @type {{blob: Blob, timestamp: number, id: number}[]} */
     const blobRecords = e.target.result;
     if (!blobRecords.length) {
       console.error(`No blobs found in range ${startId}-${endId}.`);
       cb([]);
+      return;
+    }
+    if (blobRecords.length === 1) {
+      cb([blobRecords[0].blob]);
       return;
     }
 
@@ -1147,6 +1156,8 @@ function parseTimeInputToTimestamp(timeValue, baseTimestamp) {
   const [hours, minutes, seconds] = timeValue.split(":").map(Number);
   const date = new Date(baseTimestamp);
   date.setHours(hours, minutes, seconds || 0, 0);
+  // * the time input has no date: a time before the recording start is on the next day
+  if (date.getTime() < baseTimestamp) date.setDate(date.getDate() + 1);
   return date.getTime();
 }
 
@@ -1161,66 +1172,125 @@ function setDownloadProgress(text) {
   }
 }
 
-function saveVideo() {
+/** @returns {{start: number, end: number} | null} */
+function getDownloadRange() {
+  if (downloadAllCheckbox.checked) {
+    return { start: startTimestamp, end: lastTimestamp };
+  }
+  const start = Math.max(
+    parseTimeInputToTimestamp(downloadStartTime.value, startTimestamp),
+    startTimestamp
+  );
+  const end = Math.min(
+    parseTimeInputToTimestamp(downloadEndTime.value, startTimestamp),
+    lastTimestamp
+  );
+  if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
+    alert(t("player.download_invalid_range"));
+    return null;
+  }
+  return { start, end };
+}
+
+/**
+ * @param {number} timestamp
+ * @returns {Promise<number>} id of the last blob stored at or before the timestamp
+ */
+function findBlobIdByTimestamp(timestamp) {
+  return new Promise((resolve, reject) =>
+    getNearestBlobByTimestamp(
+      timestamp,
+      streamCollectionName,
+      (blob, ts, id) => resolve(id),
+      () => reject(new Error(`No blob found before ${formatTimestamp(timestamp)}`))
+    )
+  );
+}
+
+/**
+ * @param {number} start
+ * @param {number} end
+ * @returns {Promise<Blob[]>}
+ */
+async function getBlobsBetweenTimestamps(start, end) {
+  const startId = await findBlobIdByTimestamp(start);
+  const endId = await findBlobIdByTimestamp(end);
+  return new Promise((resolve, reject) =>
+    getBlobsInRange(startId, endId, streamCollectionName, resolve, () =>
+      reject(new Error(`Could not read blobs ${startId}-${endId}`))
+    )
+  );
+}
+
+/**
+ * Remux the selected range into one WebM file. With the File System API the file
+ * streams to disk and has no length limit; otherwise it is built in RAM and capped.
+ */
+async function saveVideo() {
   if (!startTimestamp || !lastTimestamp) {
     alert(t("error.no_video"));
     return;
   }
 
-  let downloadStart = startTimestamp;
-  let downloadEnd = lastTimestamp;
+  const range = getDownloadRange();
+  if (!range) return;
 
-  if (!downloadAllCheckbox.checked) {
-    downloadStart = parseTimeInputToTimestamp(downloadStartTime.value, startTimestamp);
-    downloadEnd = parseTimeInputToTimestamp(downloadEndTime.value, startTimestamp);
+  const filename = `video_${formatTimestamp(range.start).replaceAll(":", "-")}_${formatTimestamp(range.end).replaceAll(":", "-")}.webm`;
 
-    if (downloadStart >= downloadEnd) {
-      alert(t("player.download_invalid_range"));
+  /** @type {FileSystemWritableFileStream | null} */
+  let writable = null;
+  try {
+    let target;
+    if (window.showSaveFilePicker) {
+      // * the picker consumes the user activation of the click, so it comes before any other await
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: "WebM", accept: { "video/webm": [".webm"] } }],
+      });
+      writable = await handle.createWritable();
+      target = new Mediabunny.StreamTarget(writable);
+    } else {
+      if (range.end - range.start > MAX_BROWSER_DOWNLOAD_DURATION) {
+        alert(
+          t("player.download_too_long", {
+            maxMinutes: MAX_BROWSER_DOWNLOAD_DURATION / 60 / 1000,
+          })
+        );
+        return;
+      }
+      target = new Mediabunny.BufferTarget();
+    }
+
+    setDownloadProgress(t("player.download_collecting"));
+    const blobs = await getBlobsBetweenTimestamps(range.start, range.end);
+    if (!blobs.length) {
+      alert(t("error.no_blob"));
       return;
     }
 
-    if (downloadStart < startTimestamp) downloadStart = startTimestamp;
-    if (downloadEnd > lastTimestamp) downloadEnd = lastTimestamp;
+    await assembleBlobsToWebm(blobs, target);
+    // * finalize() closed the stream
+    writable = null;
+
+    if (target instanceof Mediabunny.BufferTarget) {
+      triggerDownload(new Blob([target.buffer], { type: "video/webm" }), filename);
+    }
+  } catch (err) {
+    if (err.name === "AbortError") return;
+    console.error("Error creating the WebM file:", err);
+    alert(t("player.download_failed"));
+  } finally {
+    if (writable) await writable.abort().catch(() => {});
+    setDownloadProgress(null);
   }
-
-  if (downloadEnd - downloadStart > MAX_BROWSER_DOWNLOAD_DURATION) {
-    alert(
-      t("player.download_too_long", {
-        maxMinutes: MAX_BROWSER_DOWNLOAD_DURATION / 60 / 1000,
-      })
-    );
-    return;
-  }
-
-  setDownloadProgress("Raccolta blob...");
-
-  getNearestBlobByTimestamp(downloadStart, streamCollectionName, (blob, ts, startId) => {
-    getNearestBlobByTimestamp(downloadEnd, streamCollectionName, (blob2, ts2, endId) => {
-      getBlobsInRange(startId, endId, streamCollectionName, (blobs) => {
-        if (!blobs || !blobs.length) {
-          alert(t("error.no_blob"));
-          setDownloadProgress(null);
-          return;
-        }
-
-        const filename = `video_${formatTimestamp(downloadStart).replaceAll(":", "-")}_${formatTimestamp(downloadEnd).replaceAll(":", "-")}.webm`;
-
-        assembleBlobsToWebm(blobs, filename).catch((err) => {
-          console.error("Errore creazione WebM:", err);
-          alert(t("player.download_failed"));
-          setDownloadProgress(null);
-        });
-      });
-    });
-  });
 }
 
 /**
- * Assemble WebM chunks into one clean WebM file using MediaBunny.
+ * Remux the stored WebM chunks into one continuous WebM file, without re-encoding.
  * @param {Blob[]} blobs
- * @param {string} filename
+ * @param {import("mediabunny").Target} target
  */
-async function assembleBlobsToWebm(blobs, filename) {
+async function assembleBlobsToWebm(blobs, target) {
   if (!window.Mediabunny) {
     throw new Error("MediaBunny is not loaded.");
   }
@@ -1229,19 +1299,14 @@ async function assembleBlobsToWebm(blobs, filename) {
     Input,
     Output,
     BlobSource,
-    BufferTarget,
-    MkvOutputFormat,
+    WebMOutputFormat,
     ALL_FORMATS,
     EncodedPacketSink,
     EncodedVideoPacketSource,
     EncodedAudioPacketSource,
   } = window.Mediabunny;
 
-  const target = new BufferTarget();
-  const output = new Output({
-    format: new MkvOutputFormat(),
-    target,
-  });
+  const output = new Output({ format: new WebMOutputFormat(), target });
 
   const firstInput = new Input({
     formats: ALL_FORMATS,
@@ -1251,7 +1316,7 @@ async function assembleBlobsToWebm(blobs, filename) {
   const firstAudioTrack = await firstInput.getPrimaryAudioTrack();
 
   if (!firstVideoTrack) {
-    throw new Error("Nessuna traccia video trovata nel primo blob.");
+    throw new Error("No video track in the first blob.");
   }
 
   const videoSource = new EncodedVideoPacketSource(firstVideoTrack.codec);
@@ -1265,11 +1330,35 @@ async function assembleBlobsToWebm(blobs, filename) {
 
   await output.start();
 
+  try {
+    await copyPackets(blobs, videoSource, audioSource);
+  } catch (err) {
+    await output.cancel();
+    throw err;
+  }
+
+  setDownloadProgress(t("player.download_finalizing"));
+  await output.finalize();
+}
+
+/**
+ * Append the packets of every blob to the sources, shifting timestamps so the blobs play back to back.
+ * @param {Blob[]} blobs
+ * @param {import("mediabunny").EncodedVideoPacketSource} videoSource
+ * @param {import("mediabunny").EncodedAudioPacketSource | null} audioSource
+ */
+async function copyPackets(blobs, videoSource, audioSource) {
+  const { Input, BlobSource, ALL_FORMATS, EncodedPacketSink } = window.Mediabunny;
+
   let videoTimeOffset = 0;
   let audioTimeOffset = 0;
+  let videoConfigSent = false;
+  let audioConfigSent = false;
 
   for (let idx = 0; idx < blobs.length; idx++) {
-    setDownloadProgress(`Creazione WebM ${idx + 1}/${blobs.length}...`);
+    setDownloadProgress(
+      t("player.download_progress", { current: idx + 1, total: blobs.length })
+    );
 
     const input = new Input({
       formats: ALL_FORMATS,
@@ -1280,10 +1369,13 @@ async function assembleBlobsToWebm(blobs, filename) {
     if (videoTrack) {
       const videoSink = new EncodedPacketSink(videoTrack);
       for await (const packet of videoSink.packets()) {
-        await videoSource.add({
-          ...packet,
-          timestamp: packet.timestamp + videoTimeOffset,
-        });
+        await videoSource.add(
+          packet.clone({ timestamp: packet.timestamp + videoTimeOffset }),
+          videoConfigSent
+            ? undefined
+            : { decoderConfig: await videoTrack.getDecoderConfig() }
+        );
+        videoConfigSent = true;
       }
       videoTimeOffset += await videoTrack.computeDuration();
     }
@@ -1293,10 +1385,13 @@ async function assembleBlobsToWebm(blobs, filename) {
       if (audioTrack) {
         const audioSink = new EncodedPacketSink(audioTrack);
         for await (const packet of audioSink.packets()) {
-          await audioSource.add({
-            ...packet,
-            timestamp: packet.timestamp + audioTimeOffset,
-          });
+          await audioSource.add(
+            packet.clone({ timestamp: packet.timestamp + audioTimeOffset }),
+            audioConfigSent
+              ? undefined
+              : { decoderConfig: await audioTrack.getDecoderConfig() }
+          );
+          audioConfigSent = true;
         }
         audioTimeOffset += await audioTrack.computeDuration();
       }
@@ -1305,13 +1400,6 @@ async function assembleBlobsToWebm(blobs, filename) {
 
   videoSource.close();
   if (audioSource) audioSource.close();
-
-  setDownloadProgress("Finalizzazione WebM...");
-  await output.finalize();
-
-  const webmBlob = new Blob([target.buffer], { type: "video/webm" });
-  triggerDownload(webmBlob, filename);
-  setDownloadProgress(null);
 }
 
 /**
