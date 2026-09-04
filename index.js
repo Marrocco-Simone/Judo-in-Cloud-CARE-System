@@ -19,6 +19,8 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+const competitionSlug = urlParams.get("slug");
+const tatamiNumber = urlParams.get("tatami");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -27,6 +29,8 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  competitionSlug,
+  tatamiNumber,
 });
 
 /** @type {HTMLInputElement} */
@@ -77,6 +81,13 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLInputElement} */
+const slugInput = document.getElementById("slugInput");
+slugInput.value = competitionSlug || "";
+/** @type {HTMLInputElement} */
+const tatamiInput = document.getElementById("tatamiInput");
+tatamiInput.value = tatamiNumber || "";
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -99,6 +110,11 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  if (slugInput.value) newParams.set("slug", slugInput.value.trim());
+  else newParams.delete("slug");
+  if (tatamiInput.value) newParams.set("tatami", tatamiInput.value);
+  else newParams.delete("tatami");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`

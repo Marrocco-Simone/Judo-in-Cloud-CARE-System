@@ -24,7 +24,7 @@ This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no fr
 
 ### Key Concepts in `camera.js`
 
-- **URL query params** drive configuration: `videoBitsPerSecond`, `REFRESHRATE`, `DELAY_MULTIPLIER`, `useAudio`, `logDatabaseOp`, `showMoreVideoInfo`, `deviceId`. The landing page (`index.js`) builds the query string and navigates to `camera.html`.
+- **URL query params** drive configuration: `videoBitsPerSecond`, `REFRESHRATE`, `DELAY_MULTIPLIER`, `useAudio`, `logDatabaseOp`, `showMoreVideoInfo`, `deviceId`, `slug` and `tatami` (Shiai competition slug and tatami number for the live scoreboard iframe). The landing page (`index.js`) builds the query string and navigates to `camera.html`.
 - **IndexedDB** (`blobStoreDB`): One object store — `streamBlobs` (small chunks at REFRESHRATE for live playback). Blobs are keyed by auto-increment id with a timestamp index.
 - **MediaSource API**: A `SourceBuffer` in `sequence` mode receives blobs from IndexedDB one-by-one on a timer. Buffer is capped at `MAXTIME` seconds to prevent RAM overflow.
 - **Single MediaRecorder**: Records the webcam stream at REFRESHRATE intervals, storing WebM blobs to IndexedDB.

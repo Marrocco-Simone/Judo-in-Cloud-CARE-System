@@ -19,6 +19,14 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+const LIVE_TATAMI_BASE_URL = "https://judoincloud.com";
+const competitionSlug = urlParams.get("slug");
+const tatamiNumber = urlParams.get("tatami");
+/** public Shiai page that mirrors the scoreboard monitor of the tatami */
+const liveUrl =
+  competitionSlug && tatamiNumber
+    ? `${LIVE_TATAMI_BASE_URL}/${encodeURIComponent(competitionSlug)}/tatami/${encodeURIComponent(tatamiNumber)}`
+    : null;
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -27,6 +35,8 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  competitionSlug,
+  tatamiNumber,
 });
 
 /** @type {HTMLInputElement} */
@@ -77,6 +87,13 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLInputElement} */
+const slugInput = document.getElementById("slugInput");
+slugInput.value = competitionSlug || "";
+/** @type {HTMLInputElement} */
+const tatamiInput = document.getElementById("tatamiInput");
+tatamiInput.value = tatamiNumber || "";
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -99,6 +116,11 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  if (slugInput.value) newParams.set("slug", slugInput.value.trim());
+  else newParams.delete("slug");
+  if (tatamiInput.value) newParams.set("tatami", tatamiInput.value);
+  else newParams.delete("tatami");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
@@ -808,7 +830,7 @@ const keyMap = {
   ".": () => skipInVideoBuffered(0.1),
   p: () => changePlaybackSpeed(),
   backspace: () => returnLive(),
-
+  s: () => toggleLiveScoreboard(),
 };
 
 document.addEventListener("keydown", (e) => {
@@ -840,6 +862,35 @@ function toggleFullScreenMode() {
 document.addEventListener("fullscreenchange", () => {
   videoContainer.classList.toggle("full-screen", document.fullscreenElement);
 });
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * LIVE SCOREBOARD
+
+/** @type {HTMLButtonElement} */
+const scoreboardBtn = document.querySelector(".scoreboard-btn");
+/** @type {HTMLIFrameElement | null} */
+let liveIframe = null;
+
+if (liveUrl) {
+  scoreboardBtn.style.display = "";
+}
+
+function toggleLiveScoreboard() {
+  if (!liveUrl) return;
+  if (liveIframe) {
+    liveIframe.remove();
+    liveIframe = null;
+  } else {
+    liveIframe = document.createElement("iframe");
+    liveIframe.src = liveUrl;
+    liveIframe.className = "live-scoreboard-iframe";
+    liveIframe.allow = "autoplay";
+    liveIframe.title = t("player.scoreboard");
+    videoContainer.appendChild(liveIframe);
+  }
+}
+
+scoreboardBtn.addEventListener("click", toggleLiveScoreboard);
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * PLAY / PAUSE

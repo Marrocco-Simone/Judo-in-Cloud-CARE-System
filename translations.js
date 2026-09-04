@@ -34,6 +34,9 @@ const TRANSLATIONS = {
       frame_size: "Frame size",
       more_info: "More video info",
       delay_multiplier: "Moltiplicatore ritardo",
+      live_slug: "Slug della gara (Judo in Cloud)",
+      live_tatami: "Numero tatami",
+      live_slug_placeholder: "nome-della-gara",
       log_db: "Log database operations",
     },
     delete: {
@@ -75,6 +78,8 @@ const TRANSLATIONS = {
       download_collecting: "Recupero del video...",
       download_progress: "Creazione file {current}/{total}...",
       download_finalizing: "Finalizzazione del file...",
+      scoreboard: "Tabellone live",
+      scoreboard_key: "Tabellone live (S)",
     },
     shortcuts: {
       title_key: "Tasto",
@@ -97,6 +102,8 @@ const TRANSLATIONS = {
       slow: "Rallenta video / Torna normale",
       backspace: "Backspace (freccia lunga a sinistra)",
       return_live: "Torna live",
+      s: "S",
+      scoreboard: "Mostra / nascondi tabellone live",
     },
   },
   en: {
@@ -128,6 +135,9 @@ const TRANSLATIONS = {
       frame_size: "Frame size",
       more_info: "More video info",
       delay_multiplier: "Delay multiplier",
+      live_slug: "Competition slug (Judo in Cloud)",
+      live_tatami: "Tatami number",
+      live_slug_placeholder: "competition-name",
       log_db: "Log database operations",
     },
     delete: {
@@ -169,6 +179,8 @@ const TRANSLATIONS = {
       download_collecting: "Collecting the video...",
       download_progress: "Creating file {current}/{total}...",
       download_finalizing: "Finalizing the file...",
+      scoreboard: "Live scoreboard",
+      scoreboard_key: "Live scoreboard (S)",
     },
     shortcuts: {
       title_key: "Key",
@@ -191,6 +203,8 @@ const TRANSLATIONS = {
       slow: "Slow motion / Normal speed",
       backspace: "Backspace (long left arrow)",
       return_live: "Return to live",
+      s: "S",
+      scoreboard: "Show / hide live scoreboard",
     },
   },
   de: {
@@ -222,6 +236,9 @@ const TRANSLATIONS = {
       frame_size: "Frame-Größe",
       more_info: "Mehr Video-Info",
       delay_multiplier: "Verzögerungsmultiplikator",
+      live_slug: "Wettkampf-Slug (Judo in Cloud)",
+      live_tatami: "Tatami-Nummer",
+      live_slug_placeholder: "wettkampf-name",
       log_db: "Datenbankoperationen protokollieren",
     },
     delete: {
@@ -263,6 +280,8 @@ const TRANSLATIONS = {
       download_collecting: "Video wird gesammelt...",
       download_progress: "Datei wird erstellt {current}/{total}...",
       download_finalizing: "Datei wird abgeschlossen...",
+      scoreboard: "Live-Anzeigetafel",
+      scoreboard_key: "Live-Anzeigetafel (S)",
     },
     shortcuts: {
       title_key: "Taste",
@@ -285,6 +304,8 @@ const TRANSLATIONS = {
       slow: "Zeitlupe / Normale Geschwindigkeit",
       backspace: "Rücktaste (langer linker Pfeil)",
       return_live: "Zurück zum Live-Stream",
+      s: "S",
+      scoreboard: "Live-Anzeigetafel ein-/ausblenden",
     },
   },
 };
@@ -357,6 +378,10 @@ function setLanguage(lang) {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     const key = el.getAttribute("data-i18n-placeholder");
     el.placeholder = t(key);
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    el.title = t(el.getAttribute("data-i18n-title"));
   });
 
   // Update meta tags
