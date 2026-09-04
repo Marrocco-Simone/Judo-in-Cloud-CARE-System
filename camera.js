@@ -647,17 +647,15 @@ getWebcamStream();
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
 function getWebcamStream() {
   /**
-   * * if there is no deviceId specified, using "true" makes the browser choose the default camera. Works also if the inserted deviceId does not exist
-   * @type {boolean | MediaTrackConstraints}
+   * * without a deviceId the browser chooses the default camera. An unknown deviceId is ignored
+   * @type {MediaTrackConstraints}
    */
-  const video = deviceId
-    ? {
-        deviceId: deviceId,
-        frameRate: {
-          ideal: 60,
-        },
-      }
-    : true;
+  const video = {
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 30 },
+  };
+  if (deviceId) video.deviceId = deviceId;
   navigator.mediaDevices
     .getUserMedia({
       audio: useAudio,
@@ -667,6 +665,7 @@ function getWebcamStream() {
       // todo we can add multiple videotracks in the future
       const videoTrack = stream.getVideoTracks()[0];
       videoTrackLabel = videoTrack.label;
+      console.log("video track settings:", videoTrack.getSettings());
       listAllCameraDevices();
 
       /** holder of the webcam audio and video stream */
