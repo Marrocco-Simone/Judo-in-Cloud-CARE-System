@@ -80,6 +80,7 @@ const TRANSLATIONS = {
       download_finalizing: "Finalizzazione del file...",
       scoreboard: "Tabellone live",
       scoreboard_key: "Tabellone live (S)",
+      dropped_frames: "Stai perdendo troppi frame ({percent}%). Abbassa i \"videoBitsPerSecond\" sotto a: {bitrate}",
     },
     shortcuts: {
       title_key: "Tasto",
@@ -181,6 +182,7 @@ const TRANSLATIONS = {
       download_finalizing: "Finalizing the file...",
       scoreboard: "Live scoreboard",
       scoreboard_key: "Live scoreboard (S)",
+      dropped_frames: "Too many dropped frames ({percent}%). Lower \"videoBitsPerSecond\" below: {bitrate}",
     },
     shortcuts: {
       title_key: "Key",
@@ -282,6 +284,7 @@ const TRANSLATIONS = {
       download_finalizing: "Datei wird abgeschlossen...",
       scoreboard: "Live-Anzeigetafel",
       scoreboard_key: "Live-Anzeigetafel (S)",
+      dropped_frames: "Zu viele verlorene Frames ({percent}%). Senken Sie \"videoBitsPerSecond\" unter: {bitrate}",
     },
     shortcuts: {
       title_key: "Taste",
