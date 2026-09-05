@@ -1,5 +1,5 @@
 // Modules to control application life and create native browser window
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("node:path");
 
 // https://www.electronforge.io/config/makers/squirrel.windows#handling-startup-events
@@ -11,7 +11,9 @@ const createWindow = () => {
     width: 1360,
     height: 780,
     webPreferences: {
-      // preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.js"),
+      // * a minimized window would slow the streaming frame timer to 1 Hz
+      backgroundThrottling: false,
     },
     icon: "icons/logo_icon.png",
   });
@@ -43,5 +45,19 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+const YOUTUBE_HLS_UPLOAD_URL = "https://a.upload.youtube.com/http_upload_hls";
+
+// * the renderer cannot upload to YouTube itself because of CORS
+ipcMain.handle("hls:upload", async (_event, streamKey, filename, arrayBuffer) => {
+  const url = `${YOUTUBE_HLS_UPLOAD_URL}?cid=${encodeURIComponent(streamKey)}&copy=0&file=${filename}`;
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: Buffer.from(arrayBuffer),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `YouTube upload of ${filename} failed (${response.status}): ${await response.text()}`
+    );
+  }
+});

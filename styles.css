@@ -561,6 +561,40 @@ video {
   font-size: 0.9rem;
 }
 
+.streaming-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stream-key-input {
+  width: 22rem;
+}
+
+.stream-status {
+  color: #0b5e76;
+  font-weight: bold;
+}
+.stream-status.live {
+  color: red;
+}
+.stream-status.error {
+  color: #c62828;
+  font-weight: normal;
+}
+
+/* off-screen instead of display none, so the video keeps decoding for drawImage */
+.stream-source-video,
+.stream-canvas {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .white-input {
   padding: 0.5rem;
   border: 1px solid #0b5e76;
