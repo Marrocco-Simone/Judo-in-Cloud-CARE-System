@@ -1017,8 +1017,10 @@ video.addEventListener("timeupdate", () => {
     (quality.droppedVideoFrames / quality.totalVideoFrames) * 100;
 
   if (droppedFramesPercentage > 10) {
-    const newVideoBitsPerSecond = videoBitsPerSecond / 1000 / 2;
-    const warning = `Stai perdendo troppi frame (${droppedFramesPercentage}%). Abbassa i "videoBitsPerSecond" sotto a: ${newVideoBitsPerSecond}`;
+    const warning = t("player.dropped_frames", {
+      percent: droppedFramesPercentage.toFixed(1),
+      bitrate: videoBitsPerSecond / 1000 / 2,
+    });
     console.log(warning);
     const warningElem = document.querySelector(".dropped-frames-warning");
     warningElem.textContent = warning;
