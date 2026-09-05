@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **CARE System** (Camera Assistant Referee Enhanced) by Judo in Cloud. A client-side video recording and playback tool for judo referees. It captures webcam video, stores it in IndexedDB, and plays it back with DVR-like controls (rewind, slow-motion, frame-by-frame, zoom/pan).
 
-The entire application runs offline in the browser — no data is sent to or received from any server after initial page load. It is hosted at `care.judoincloud.com` and also distributed as an Electron desktop app.
+Recording and playback run offline in the browser. The only network traffic is optional: the live scoreboard (Shiai tatami page and live-keeper state) and the YouTube HLS upload from the Electron app. It is hosted at `care.judoincloud.com` and also distributed as an Electron desktop app.
 
 Language: Italian, English, German (UI now supports multiple languages via translations.js).
 
@@ -18,9 +18,10 @@ This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no fr
 
 - `index.html` + `index.js` — Landing page with settings form, camera device selection, and instructional content. Settings are passed as URL query params when navigating to the camera page.
 - `camera.html` + `camera.js` (~1400 lines) — The main camera application: webcam capture, IndexedDB storage, MediaSource video playback, keyboard/mouse controls, zoom/pan, download.
+- `youtube-stream.js` — YouTube HLS streaming, active only inside Electron. Encodes the camera through a canvas with one hardware H.264 encoder (mediabunny `CanvasSource` + `HlsOutputFormat`, MPEG-TS segments) and burns the Shiai live scoreboard into the frames, read from `live.judoincloud.com`. The Electron main process uploads each segment and playlist to YouTube over IPC (`executable/preload.js` exposes `window.electronAPI.uploadHlsFile`).
 - `styles.css` — Video player styling, controls, forms, timeline, zoom
 - `jic_styles.css` — Shared Judo in Cloud brand styles (header, footer) ported from Tailwind
-- `mediabunny.min.js` — Third-party library for converting WebM blobs to MP4 for download
+- `mediabunny.min.js` — Third-party library (IIFE build, version and build date in the header comment) used for the WebM download remux and the YouTube HLS stream
 
 ### Key Concepts in `camera.js`
 
@@ -36,7 +37,8 @@ This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no fr
 
 Uses Electron Forge to package the web app as a desktop executable. The `copyFiles` script copies root HTML/JS/CSS into the `executable/` folder before building.
 
-- `executable/main.js` — Electron main process, loads `camera.html`
+- `executable/main.js` — Electron main process, loads `index.html`, handles the `hls:upload` IPC call to YouTube
+- `executable/preload.js` — exposes `window.electronAPI` to the pages
 - `executable/forge.config.js` — Build config for Windows (Squirrel), macOS (zip), Linux (deb/rpm)
 - `executable/package.json` — `npm run make` to build distributables
 

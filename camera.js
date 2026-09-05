@@ -673,6 +673,8 @@ function moveToTimestamp(timestamp) {
 let streamMediaRecorder;
 
 let videoTrackLabel;
+/** camera (and microphone) stream, shared with youtube-stream.js @type {MediaStream | null} */
+let webcamStream = null;
 getWebcamStream();
 
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
@@ -706,6 +708,7 @@ function getWebcamStream() {
         const audioTrack = stream.getAudioTracks()[0];
         mediaStream.addTrack(audioTrack);
       }
+      webcamStream = mediaStream;
 
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         throw new Error(`Mime type "${mimeType}" is not supported.`);

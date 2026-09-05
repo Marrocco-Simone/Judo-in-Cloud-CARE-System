@@ -10,6 +10,7 @@
     <script src="translations.js" defer></script>
     <script src="mediabunny.min.js" defer></script>
     <script src="camera.js" defer></script>
+    <script src="youtube-stream.js" defer></script>
 
     <meta
       name="description"
@@ -352,6 +353,19 @@
           </label>
           <button class="white-btn download-btn" data-i18n="player.download">Download</button>
           <span class="download-progress hidden"></span>
+        </div>
+
+        <div class="streaming-bar hidden">
+          <input
+            type="password"
+            class="white-input stream-key-input"
+            autocomplete="off"
+            data-i18n-placeholder="stream.key_placeholder"
+          />
+          <button class="white-btn stream-toggle-btn"></button>
+          <span class="stream-status"></span>
+          <video class="stream-source-video" muted playsinline></video>
+          <canvas class="stream-canvas"></canvas>
         </div>
 
         <!-- ! INSTRUCTIONS -->
