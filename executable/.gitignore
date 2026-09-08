@@ -4,6 +4,7 @@ out/
 *
 !.gitignore
 !main.js
+!preload.js
 !package.json
 !package-lock.json
 !forge.config.js
