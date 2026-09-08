@@ -10,6 +10,7 @@
     <script src="translations.js" defer></script>
     <script src="mediabunny.min.js" defer></script>
     <script src="camera.js" defer></script>
+    <script src="scoreboard-overlay.js" defer></script>
     <script src="youtube-stream.js" defer></script>
 
     <meta
@@ -362,7 +363,7 @@
             autocomplete="off"
             data-i18n-placeholder="stream.key_placeholder"
           />
-          <button class="white-btn stream-toggle-btn"></button>
+          <button class="white-btn stream-toggle-btn" data-i18n="stream.start">Avvia streaming</button>
           <span class="stream-status"></span>
           <video class="stream-source-video" muted playsinline></video>
           <canvas class="stream-canvas"></canvas>

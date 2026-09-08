@@ -111,7 +111,7 @@ function setNewQueryParams(e) {
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
 
-  if (slugInput.value) newParams.set("slug", slugInput.value.trim());
+  if (slugInput.value.trim()) newParams.set("slug", slugInput.value.trim());
   else newParams.delete("slug");
   if (tatamiInput.value) newParams.set("tatami", tatamiInput.value);
   else newParams.delete("tatami");
