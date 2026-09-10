@@ -19,6 +19,14 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+const LIVE_TATAMI_BASE_URL = "https://judoincloud.com";
+const competitionSlug = urlParams.get("slug");
+const tatamiNumber = urlParams.get("tatami");
+/** public Shiai page that mirrors the scoreboard monitor of the tatami */
+const liveUrl =
+  competitionSlug && tatamiNumber
+    ? `${LIVE_TATAMI_BASE_URL}/${encodeURIComponent(competitionSlug)}/tatami/${encodeURIComponent(tatamiNumber)}`
+    : null;
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -27,6 +35,8 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  competitionSlug,
+  tatamiNumber,
 });
 
 /** @type {HTMLInputElement} */
@@ -77,6 +87,13 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLInputElement} */
+const slugInput = document.getElementById("slugInput");
+slugInput.value = competitionSlug || "";
+/** @type {HTMLInputElement} */
+const tatamiInput = document.getElementById("tatamiInput");
+tatamiInput.value = tatamiNumber || "";
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -99,6 +116,11 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  if (slugInput.value.trim()) newParams.set("slug", slugInput.value.trim());
+  else newParams.delete("slug");
+  if (tatamiInput.value) newParams.set("tatami", tatamiInput.value);
+  else newParams.delete("tatami");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
@@ -367,8 +389,9 @@ function getBlobById(id, collectionName, cb, errorCb) {
  * @param {number} targetTimestamp
  * @param {string} collectionName
  * @param {(blob: Blob, timestamp: number, id: number) => void} cb
+ * @param {() => void} [errorCb]
  */
-function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
+function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb, errorCb) {
   const transaction = db.transaction([collectionName], "readonly");
   const blobStore = transaction.objectStore(collectionName);
   const index = blobStore.index("timestamp");
@@ -376,6 +399,7 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
   const cursorRequest = index.openCursor(null, "prev");
   cursorRequest.addEventListener("error", (e) => {
     console.error("Error searching by timestamp:", e.target.errorCode);
+    if (errorCb) errorCb();
   });
   cursorRequest.addEventListener("success", (e) => {
     /**   @type {IDBCursorWithValue} */
@@ -393,6 +417,7 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
       }
     } else {
       console.error("No blobs found with a timestamp <=", targetTimestamp);
+      if (errorCb) errorCb();
     }
   });
 }
@@ -402,15 +427,17 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb) {
  * @param {number} endId
  * @param {string} collectionName
  * @param {(blobs: Blob[]) => void} cb
+ * @param {() => void} [errorCb]
  */
-function getBlobsInRange(startId, endId, collectionName, cb) {
+function getBlobsInRange(startId, endId, collectionName, cb, errorCb) {
   const transaction = db.transaction([collectionName], "readonly");
   const blobStore = transaction.objectStore(collectionName);
 
   const request = blobStore.getAll(IDBKeyRange.bound(startId, endId));
-  request.addEventListener("error", (e) =>
-    console.error("Error retrieving blobs:", e.target.errorCode)
-  );
+  request.addEventListener("error", (e) => {
+    console.error("Error retrieving blobs:", e.target.errorCode);
+    if (errorCb) errorCb();
+  });
   request.addEventListener("success", (e) => {
     /** @type {{blob: Blob, timestamp: number, id: number}[]} */
     const blobRecords = e.target.result;
@@ -419,54 +446,9 @@ function getBlobsInRange(startId, endId, collectionName, cb) {
       cb([]);
       return;
     }
-
     blobRecords.sort((a, b) => a.timestamp - b.timestamp);
-
-    const continuosRecords = [];
-    const middlePoint = Math.floor(blobRecords.length / 2);
-    for (let i = middlePoint; i < blobRecords.length; i++) {
-      if (
-        blobRecords[i].timestamp - blobRecords[i - 1].timestamp <=
-        REFRESHRATE * 1.2
-      ) {
-        continuosRecords.push(blobRecords[i]);
-      } else {
-        break;
-      }
-    }
-    for (let i = middlePoint; i > 0; i--) {
-      if (
-        blobRecords[i].timestamp - blobRecords[i - 1].timestamp <=
-        REFRESHRATE * 1.2
-      ) {
-        continuosRecords.push(blobRecords[i]);
-      } else {
-        break;
-      }
-    }
-    continuosRecords.sort((a, b) => a.timestamp - b.timestamp);
-    console.log("Blobs retrieved:", continuosRecords.length);
-
-    const biggestDiff = Math.max(
-      ...continuosRecords.map((c, i) =>
-        i === 0 ? 0 : c.timestamp - continuosRecords[i - 1].timestamp
-      )
-    );
-    console.log(
-      `Biggest timestamp diff: ${biggestDiff} (ratio ${(
-        biggestDiff / REFRESHRATE
-      ).toFixed(2)})`
-    );
-
-    const initialTimeStamp = continuosRecords[0].timestamp;
-    const finalTimeStamp = continuosRecords.at(-1).timestamp;
-    const startTime = formatTimestamp(initialTimeStamp);
-    const endTime = formatTimestamp(finalTimeStamp);
-    const totalTime = formatTime((finalTimeStamp - initialTimeStamp) / 1000);
-    console.log(`Total time: ${startTime} - ${endTime} (${totalTime})`);
-
-    const blobs = continuosRecords.map((blobRecord) => blobRecord.blob);
-    cb(blobs);
+    console.log("Blobs retrieved:", blobRecords.length);
+    cb(blobRecords.map((blobRecord) => blobRecord.blob));
   });
 }
 
@@ -642,22 +624,22 @@ function moveToTimestamp(timestamp) {
 let streamMediaRecorder;
 
 let videoTrackLabel;
+/** camera (and microphone) stream, shared with youtube-stream.js @type {MediaStream | null} */
+let webcamStream = null;
 getWebcamStream();
 
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
 function getWebcamStream() {
   /**
-   * * if there is no deviceId specified, using "true" makes the browser choose the default camera. Works also if the inserted deviceId does not exist
-   * @type {boolean | MediaTrackConstraints}
+   * * without a deviceId the browser chooses the default camera. An unknown deviceId is ignored
+   * @type {MediaTrackConstraints}
    */
-  const video = deviceId
-    ? {
-        deviceId: deviceId,
-        frameRate: {
-          ideal: 60,
-        },
-      }
-    : true;
+  const video = {
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 30 },
+  };
+  if (deviceId) video.deviceId = deviceId;
   navigator.mediaDevices
     .getUserMedia({
       audio: useAudio,
@@ -667,6 +649,7 @@ function getWebcamStream() {
       // todo we can add multiple videotracks in the future
       const videoTrack = stream.getVideoTracks()[0];
       videoTrackLabel = videoTrack.label;
+      console.log("video track settings:", videoTrack.getSettings());
       listAllCameraDevices();
 
       /** holder of the webcam audio and video stream */
@@ -676,6 +659,7 @@ function getWebcamStream() {
         const audioTrack = stream.getAudioTracks()[0];
         mediaStream.addTrack(audioTrack);
       }
+      webcamStream = mediaStream;
 
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         throw new Error(`Mime type "${mimeType}" is not supported.`);
@@ -800,7 +784,7 @@ const keyMap = {
   ".": () => skipInVideoBuffered(0.1),
   p: () => changePlaybackSpeed(),
   backspace: () => returnLive(),
-
+  s: () => toggleLiveScoreboard(),
 };
 
 document.addEventListener("keydown", (e) => {
@@ -832,6 +816,35 @@ function toggleFullScreenMode() {
 document.addEventListener("fullscreenchange", () => {
   videoContainer.classList.toggle("full-screen", document.fullscreenElement);
 });
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * LIVE SCOREBOARD
+
+/** @type {HTMLButtonElement} */
+const scoreboardBtn = document.querySelector(".scoreboard-btn");
+/** @type {HTMLIFrameElement | null} */
+let liveIframe = null;
+
+if (liveUrl) {
+  scoreboardBtn.style.display = "";
+}
+
+function toggleLiveScoreboard() {
+  if (!liveUrl) return;
+  if (liveIframe) {
+    liveIframe.remove();
+    liveIframe = null;
+  } else {
+    liveIframe = document.createElement("iframe");
+    liveIframe.src = liveUrl;
+    liveIframe.className = "live-scoreboard-iframe";
+    liveIframe.allow = "autoplay";
+    liveIframe.title = t("player.scoreboard");
+    videoContainer.appendChild(liveIframe);
+  }
+}
+
+scoreboardBtn.addEventListener("click", toggleLiveScoreboard);
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * PLAY / PAUSE
@@ -958,8 +971,10 @@ video.addEventListener("timeupdate", () => {
     (quality.droppedVideoFrames / quality.totalVideoFrames) * 100;
 
   if (droppedFramesPercentage > 10) {
-    const newVideoBitsPerSecond = videoBitsPerSecond / 1000 / 2;
-    const warning = `Stai perdendo troppi frame (${droppedFramesPercentage}%). Abbassa i "videoBitsPerSecond" sotto a: ${newVideoBitsPerSecond}`;
+    const warning = t("player.dropped_frames", {
+      percent: droppedFramesPercentage.toFixed(1),
+      bitrate: videoBitsPerSecond / 1000 / 2,
+    });
     console.log(warning);
     const warningElem = document.querySelector(".dropped-frames-warning");
     warningElem.textContent = warning;
@@ -1124,6 +1139,7 @@ deleteFormElement.addEventListener("submit", (e) => {
 });
 
 // * save video
+const downloadBar = document.querySelector(".download-bar");
 const downloadBtn = document.querySelector(".download-btn");
 const downloadProgress = document.querySelector(".download-progress");
 const downloadAllCheckbox = document.querySelector(".download-all-checkbox");
@@ -1131,6 +1147,7 @@ const downloadStartTime = document.querySelector(".download-start-time");
 const downloadEndTime = document.querySelector(".download-end-time");
 
 downloadBtn.addEventListener("click", saveVideo);
+downloadBar.addEventListener("keydown", (e) => e.stopPropagation());
 
 downloadAllCheckbox.addEventListener("change", () => {
   const disabled = downloadAllCheckbox.checked;
@@ -1144,10 +1161,12 @@ function updateDownloadTimeInputs() {
   downloadEndTime.value = formatTimestamp(lastTimestamp);
 }
 
-function parseTimeInputToTimestamp(timeValue, baseTimestamp) {
+function parseTimeInputToTimestamp(timeValue, baseTimestamp, rollToNextDay) {
   const [hours, minutes, seconds] = timeValue.split(":").map(Number);
   const date = new Date(baseTimestamp);
   date.setHours(hours, minutes, seconds || 0, 0);
+  // * the time input has no date: when the recording crosses midnight, times before its start are on the next day
+  if (rollToNextDay && date.getTime() < baseTimestamp) date.setDate(date.getDate() + 1);
   return date.getTime();
 }
 
@@ -1162,66 +1181,144 @@ function setDownloadProgress(text) {
   }
 }
 
-function saveVideo() {
+/** @returns {{start: number, end: number} | null} */
+function getDownloadRange() {
+  if (downloadAllCheckbox.checked) {
+    return { start: startTimestamp, end: lastTimestamp };
+  }
+  const crossesMidnight =
+    new Date(lastTimestamp).toDateString() !==
+    new Date(startTimestamp).toDateString();
+  const start = Math.max(
+    parseTimeInputToTimestamp(
+      downloadStartTime.value,
+      startTimestamp,
+      crossesMidnight
+    ),
+    startTimestamp
+  );
+  const end = Math.min(
+    parseTimeInputToTimestamp(
+      downloadEndTime.value,
+      startTimestamp,
+      crossesMidnight
+    ),
+    lastTimestamp
+  );
+  if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
+    alert(t("player.download_invalid_range"));
+    return null;
+  }
+  return { start, end };
+}
+
+/**
+ * @param {number} timestamp
+ * @returns {Promise<number>} id of the last blob stored at or before the timestamp
+ */
+function findBlobIdByTimestamp(timestamp) {
+  return new Promise((resolve, reject) =>
+    getNearestBlobByTimestamp(
+      timestamp,
+      streamCollectionName,
+      (blob, ts, id) => resolve(id),
+      () => reject(new Error(`No blob found before ${formatTimestamp(timestamp)}`))
+    )
+  );
+}
+
+/**
+ * @param {number} start
+ * @param {number} end
+ * @returns {Promise<Blob[]>}
+ */
+async function getBlobsBetweenTimestamps(start, end) {
+  const startId = await findBlobIdByTimestamp(start);
+  const endId = await findBlobIdByTimestamp(end);
+  return new Promise((resolve, reject) =>
+    getBlobsInRange(startId, endId, streamCollectionName, resolve, () =>
+      reject(new Error(`Could not read blobs ${startId}-${endId}`))
+    )
+  );
+}
+
+/**
+ * Remux the selected range into one WebM file. With the File System API the file
+ * streams to disk and has no length limit; otherwise it is built in RAM and capped.
+ */
+async function saveVideo() {
   if (!startTimestamp || !lastTimestamp) {
     alert(t("error.no_video"));
     return;
   }
 
-  let downloadStart = startTimestamp;
-  let downloadEnd = lastTimestamp;
+  const range = getDownloadRange();
+  if (!range) return;
 
-  if (!downloadAllCheckbox.checked) {
-    downloadStart = parseTimeInputToTimestamp(downloadStartTime.value, startTimestamp);
-    downloadEnd = parseTimeInputToTimestamp(downloadEndTime.value, startTimestamp);
+  const filename = `video_${formatTimestamp(range.start).replaceAll(":", "-")}_${formatTimestamp(range.end).replaceAll(":", "-")}.webm`;
 
-    if (downloadStart >= downloadEnd) {
-      alert(t("player.download_invalid_range"));
+  /** @type {FileSystemWritableFileStream | null} */
+  let writable = null;
+  try {
+    /** @type {import("mediabunny").Target | null} */
+    let target = null;
+    if (window.showSaveFilePicker) {
+      try {
+        // * the picker consumes the user activation of the click, so it comes before any other await
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: "WebM", accept: { "video/webm": [".webm"] } }],
+        });
+        writable = await handle.createWritable();
+        target = new Mediabunny.StreamTarget(writable);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        // * the picker can fail (e.g. no fileSystem permission): fall back to the in-RAM download
+        console.warn("Could not use the file picker, falling back:", err);
+      }
+    }
+    if (!target) {
+      if (range.end - range.start > MAX_BROWSER_DOWNLOAD_DURATION) {
+        alert(
+          t("player.download_too_long", {
+            maxMinutes: MAX_BROWSER_DOWNLOAD_DURATION / 60 / 1000,
+          })
+        );
+        return;
+      }
+      target = new Mediabunny.BufferTarget();
+    }
+
+    setDownloadProgress(t("player.download_collecting"));
+    const blobs = await getBlobsBetweenTimestamps(range.start, range.end);
+    if (!blobs.length) {
+      alert(t("error.no_blob"));
       return;
     }
 
-    if (downloadStart < startTimestamp) downloadStart = startTimestamp;
-    if (downloadEnd > lastTimestamp) downloadEnd = lastTimestamp;
+    await assembleBlobsToWebm(blobs, target);
+    // * finalize() closed the stream
+    writable = null;
+
+    if (target instanceof Mediabunny.BufferTarget) {
+      triggerDownload(new Blob([target.buffer], { type: "video/webm" }), filename);
+    }
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return;
+    console.error("Error creating the WebM file:", err);
+    alert(t("player.download_failed"));
+  } finally {
+    if (writable) await writable.abort().catch(() => {});
+    setDownloadProgress(null);
   }
-
-  if (downloadEnd - downloadStart > MAX_BROWSER_DOWNLOAD_DURATION) {
-    alert(
-      t("player.download_too_long", {
-        maxMinutes: MAX_BROWSER_DOWNLOAD_DURATION / 60 / 1000,
-      })
-    );
-    return;
-  }
-
-  setDownloadProgress("Raccolta blob...");
-
-  getNearestBlobByTimestamp(downloadStart, streamCollectionName, (blob, ts, startId) => {
-    getNearestBlobByTimestamp(downloadEnd, streamCollectionName, (blob2, ts2, endId) => {
-      getBlobsInRange(startId, endId, streamCollectionName, (blobs) => {
-        if (!blobs || !blobs.length) {
-          alert(t("error.no_blob"));
-          setDownloadProgress(null);
-          return;
-        }
-
-        const filename = `video_${formatTimestamp(downloadStart).replaceAll(":", "-")}_${formatTimestamp(downloadEnd).replaceAll(":", "-")}.webm`;
-
-        assembleBlobsToWebm(blobs, filename).catch((err) => {
-          console.error("Errore creazione WebM:", err);
-          alert(t("player.download_failed"));
-          setDownloadProgress(null);
-        });
-      });
-    });
-  });
 }
 
 /**
- * Assemble WebM chunks into one clean WebM file using MediaBunny.
+ * Remux the stored WebM chunks into one continuous WebM file, without re-encoding.
  * @param {Blob[]} blobs
- * @param {string} filename
+ * @param {import("mediabunny").Target} target
  */
-async function assembleBlobsToWebm(blobs, filename) {
+async function assembleBlobsToWebm(blobs, target) {
   if (!window.Mediabunny) {
     throw new Error("MediaBunny is not loaded.");
   }
@@ -1230,19 +1327,14 @@ async function assembleBlobsToWebm(blobs, filename) {
     Input,
     Output,
     BlobSource,
-    BufferTarget,
-    MkvOutputFormat,
+    WebMOutputFormat,
     ALL_FORMATS,
     EncodedPacketSink,
     EncodedVideoPacketSource,
     EncodedAudioPacketSource,
   } = window.Mediabunny;
 
-  const target = new BufferTarget();
-  const output = new Output({
-    format: new MkvOutputFormat(),
-    target,
-  });
+  const output = new Output({ format: new WebMOutputFormat(), target });
 
   const firstInput = new Input({
     formats: ALL_FORMATS,
@@ -1252,7 +1344,7 @@ async function assembleBlobsToWebm(blobs, filename) {
   const firstAudioTrack = await firstInput.getPrimaryAudioTrack();
 
   if (!firstVideoTrack) {
-    throw new Error("Nessuna traccia video trovata nel primo blob.");
+    throw new Error("No video track in the first blob.");
   }
 
   const videoSource = new EncodedVideoPacketSource(firstVideoTrack.codec);
@@ -1266,11 +1358,35 @@ async function assembleBlobsToWebm(blobs, filename) {
 
   await output.start();
 
+  try {
+    await copyPackets(blobs, videoSource, audioSource);
+  } catch (err) {
+    await output.cancel();
+    throw err;
+  }
+
+  setDownloadProgress(t("player.download_finalizing"));
+  await output.finalize();
+}
+
+/**
+ * Append the packets of every blob to the sources, shifting timestamps so the blobs play back to back.
+ * @param {Blob[]} blobs
+ * @param {import("mediabunny").EncodedVideoPacketSource} videoSource
+ * @param {import("mediabunny").EncodedAudioPacketSource | null} audioSource
+ */
+async function copyPackets(blobs, videoSource, audioSource) {
+  const { Input, BlobSource, ALL_FORMATS, EncodedPacketSink } = window.Mediabunny;
+
   let videoTimeOffset = 0;
   let audioTimeOffset = 0;
+  let videoConfigSent = false;
+  let audioConfigSent = false;
 
   for (let idx = 0; idx < blobs.length; idx++) {
-    setDownloadProgress(`Creazione WebM ${idx + 1}/${blobs.length}...`);
+    setDownloadProgress(
+      t("player.download_progress", { current: idx + 1, total: blobs.length })
+    );
 
     const input = new Input({
       formats: ALL_FORMATS,
@@ -1281,10 +1397,13 @@ async function assembleBlobsToWebm(blobs, filename) {
     if (videoTrack) {
       const videoSink = new EncodedPacketSink(videoTrack);
       for await (const packet of videoSink.packets()) {
-        await videoSource.add({
-          ...packet,
-          timestamp: packet.timestamp + videoTimeOffset,
-        });
+        await videoSource.add(
+          packet.clone({ timestamp: packet.timestamp + videoTimeOffset }),
+          videoConfigSent
+            ? undefined
+            : { decoderConfig: await videoTrack.getDecoderConfig() }
+        );
+        videoConfigSent = true;
       }
       videoTimeOffset += await videoTrack.computeDuration();
     }
@@ -1294,10 +1413,13 @@ async function assembleBlobsToWebm(blobs, filename) {
       if (audioTrack) {
         const audioSink = new EncodedPacketSink(audioTrack);
         for await (const packet of audioSink.packets()) {
-          await audioSource.add({
-            ...packet,
-            timestamp: packet.timestamp + audioTimeOffset,
-          });
+          await audioSource.add(
+            packet.clone({ timestamp: packet.timestamp + audioTimeOffset }),
+            audioConfigSent
+              ? undefined
+              : { decoderConfig: await audioTrack.getDecoderConfig() }
+          );
+          audioConfigSent = true;
         }
         audioTimeOffset += await audioTrack.computeDuration();
       }
@@ -1306,13 +1428,6 @@ async function assembleBlobsToWebm(blobs, filename) {
 
   videoSource.close();
   if (audioSource) audioSource.close();
-
-  setDownloadProgress("Finalizzazione WebM...");
-  await output.finalize();
-
-  const webmBlob = new Blob([target.buffer], { type: "video/webm" });
-  triggerDownload(webmBlob, filename);
-  setDownloadProgress(null);
 }
 
 /**

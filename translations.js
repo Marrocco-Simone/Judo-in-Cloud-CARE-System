@@ -34,6 +34,9 @@ const TRANSLATIONS = {
       frame_size: "Frame size",
       more_info: "More video info",
       delay_multiplier: "Moltiplicatore ritardo",
+      live_slug: "Slug della gara (Judo in Cloud)",
+      live_tatami: "Numero tatami",
+      live_slug_placeholder: "nome-della-gara",
       log_db: "Log database operations",
     },
     delete: {
@@ -56,6 +59,19 @@ const TRANSLATIONS = {
       benefits: "Vantaggi",
       language: "Lingua",
     },
+    stream: {
+      key_placeholder: "Chiave dello stream YouTube",
+      start: "Avvia streaming",
+      stop: "Ferma streaming",
+      connecting: "Connessione...",
+      live: "LIVE",
+      stopped: "Fermato",
+      error: "Errore",
+      winner: "Vince",
+      next_match: "Prossimo Incontro",
+      no_camera: "La telecamera non e' ancora pronta.",
+      codec_unsupported: "Questo computer non puo' codificare H.264 e AAC, richiesti da YouTube.",
+    },
     error: {
       recording: "Ci sono dei problemi con la registrazione.\n\nAssicurati che la webcam non sia usata da qualche altro programma, poi ricarica il CARE system.\n\nSe il problema dovesse persistere, il tuo computer potrebbe non supportare la registrazione video\n\n(formato video: {mimeType}).\n\nErrore: {message}",
       no_video: "Nessun video registrato.",
@@ -71,7 +87,13 @@ const TRANSLATIONS = {
       download_end: "Fine",
       download_invalid_range: "Intervallo non valido: l'inizio deve essere prima della fine.",
       download_too_long: "Il download dal browser e' limitato a clip di massimo {maxMinutes} minuti. Per il video completo usa lo script ffmpeg offline.",
-      download_failed: "Non e' stato possibile creare il file WebM. Prova con una clip piu' corta o usa lo script ffmpeg offline.",
+      download_failed: "Non e' stato possibile creare il file WebM. Se un file e' stato creato, e' vuoto. Prova con una clip piu' corta.",
+      download_collecting: "Recupero del video...",
+      download_progress: "Creazione file {current}/{total}...",
+      download_finalizing: "Finalizzazione del file...",
+      scoreboard: "Tabellone live",
+      scoreboard_key: "Tabellone live (S)",
+      dropped_frames: "Stai perdendo troppi frame ({percent}%). Abbassa i \"videoBitsPerSecond\" sotto a: {bitrate}",
     },
     shortcuts: {
       title_key: "Tasto",
@@ -94,6 +116,8 @@ const TRANSLATIONS = {
       slow: "Rallenta video / Torna normale",
       backspace: "Backspace (freccia lunga a sinistra)",
       return_live: "Torna live",
+      s: "S",
+      scoreboard: "Mostra / nascondi tabellone live",
     },
   },
   en: {
@@ -125,6 +149,9 @@ const TRANSLATIONS = {
       frame_size: "Frame size",
       more_info: "More video info",
       delay_multiplier: "Delay multiplier",
+      live_slug: "Competition slug (Judo in Cloud)",
+      live_tatami: "Tatami number",
+      live_slug_placeholder: "competition-name",
       log_db: "Log database operations",
     },
     delete: {
@@ -147,6 +174,19 @@ const TRANSLATIONS = {
       benefits: "Benefits",
       language: "Language",
     },
+    stream: {
+      key_placeholder: "YouTube stream key",
+      start: "Start streaming",
+      stop: "Stop streaming",
+      connecting: "Connecting...",
+      live: "LIVE",
+      stopped: "Stopped",
+      error: "Error",
+      winner: "Winner",
+      next_match: "Next match",
+      no_camera: "The camera is not ready yet.",
+      codec_unsupported: "This computer cannot encode H.264 and AAC, which YouTube requires.",
+    },
     error: {
       recording: "There are problems with the recording.\n\nMake sure the webcam is not being used by another program, then reload the CARE system.\n\nIf the problem persists, your computer may not support video recording\n\n(video format: {mimeType}).\n\nError: {message}",
       no_video: "No video recorded.",
@@ -162,7 +202,13 @@ const TRANSLATIONS = {
       download_end: "End",
       download_invalid_range: "Invalid range: start must be before end.",
       download_too_long: "Browser download is limited to clips up to {maxMinutes} minutes. Use the offline ffmpeg script for the full video.",
-      download_failed: "Could not create the WebM file. Try a shorter clip or use the offline ffmpeg script.",
+      download_failed: "Could not create the WebM file. If a file was created, it is empty. Try a shorter clip.",
+      download_collecting: "Collecting the video...",
+      download_progress: "Creating file {current}/{total}...",
+      download_finalizing: "Finalizing the file...",
+      scoreboard: "Live scoreboard",
+      scoreboard_key: "Live scoreboard (S)",
+      dropped_frames: "Too many dropped frames ({percent}%). Lower \"videoBitsPerSecond\" below: {bitrate}",
     },
     shortcuts: {
       title_key: "Key",
@@ -185,6 +231,8 @@ const TRANSLATIONS = {
       slow: "Slow motion / Normal speed",
       backspace: "Backspace (long left arrow)",
       return_live: "Return to live",
+      s: "S",
+      scoreboard: "Show / hide live scoreboard",
     },
   },
   de: {
@@ -216,6 +264,9 @@ const TRANSLATIONS = {
       frame_size: "Frame-Größe",
       more_info: "Mehr Video-Info",
       delay_multiplier: "Verzögerungsmultiplikator",
+      live_slug: "Wettkampf-Slug (Judo in Cloud)",
+      live_tatami: "Tatami-Nummer",
+      live_slug_placeholder: "wettkampf-name",
       log_db: "Datenbankoperationen protokollieren",
     },
     delete: {
@@ -238,6 +289,19 @@ const TRANSLATIONS = {
       benefits: "Vorteile",
       language: "Sprache",
     },
+    stream: {
+      key_placeholder: "YouTube-Streamschlüssel",
+      start: "Streaming starten",
+      stop: "Streaming stoppen",
+      connecting: "Verbinden...",
+      live: "LIVE",
+      stopped: "Gestoppt",
+      error: "Fehler",
+      winner: "Sieger",
+      next_match: "Nächster Kampf",
+      no_camera: "Die Kamera ist noch nicht bereit.",
+      codec_unsupported: "Dieser Computer kann H.264 und AAC nicht kodieren, die YouTube benötigt.",
+    },
     error: {
       recording: "Es gibt Probleme mit der Aufnahme.\n\nStellen Sie sicher, dass die Webcam nicht von einem anderen Programm verwendet wird, laden Sie dann das CARE-System neu.\n\nWenn das Problem weiterhin besteht, unterstützt Ihr Computer möglicherweise keine Videoaufnahme\n\n(Videoformat: {mimeType}).\n\nFehler: {message}",
       no_video: "Kein Video aufgenommen.",
@@ -253,7 +317,13 @@ const TRANSLATIONS = {
       download_end: "Ende",
       download_invalid_range: "Ungültiger Bereich: Der Anfang muss vor dem Ende liegen.",
       download_too_long: "Der Browser-Download ist auf Clips bis {maxMinutes} Minuten begrenzt. Verwenden Sie das Offline-ffmpeg-Skript fuer das vollstaendige Video.",
-      download_failed: "Die WebM-Datei konnte nicht erstellt werden. Versuchen Sie einen kuerzeren Clip oder verwenden Sie das Offline-ffmpeg-Skript.",
+      download_failed: "Die WebM-Datei konnte nicht erstellt werden. Falls eine Datei erstellt wurde, ist sie leer. Versuchen Sie einen kuerzeren Clip.",
+      download_collecting: "Video wird gesammelt...",
+      download_progress: "Datei wird erstellt {current}/{total}...",
+      download_finalizing: "Datei wird abgeschlossen...",
+      scoreboard: "Live-Anzeigetafel",
+      scoreboard_key: "Live-Anzeigetafel (S)",
+      dropped_frames: "Zu viele verlorene Frames ({percent}%). Senken Sie \"videoBitsPerSecond\" unter: {bitrate}",
     },
     shortcuts: {
       title_key: "Taste",
@@ -276,6 +346,8 @@ const TRANSLATIONS = {
       slow: "Zeitlupe / Normale Geschwindigkeit",
       backspace: "Rücktaste (langer linker Pfeil)",
       return_live: "Zurück zum Live-Stream",
+      s: "S",
+      scoreboard: "Live-Anzeigetafel ein-/ausblenden",
     },
   },
 };
@@ -348,6 +420,10 @@ function setLanguage(lang) {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     const key = el.getAttribute("data-i18n-placeholder");
     el.placeholder = t(key);
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    el.title = t(el.getAttribute("data-i18n-title"));
   });
 
   // Update meta tags
