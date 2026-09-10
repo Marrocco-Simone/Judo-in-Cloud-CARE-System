@@ -1161,12 +1161,12 @@ function updateDownloadTimeInputs() {
   downloadEndTime.value = formatTimestamp(lastTimestamp);
 }
 
-function parseTimeInputToTimestamp(timeValue, baseTimestamp) {
+function parseTimeInputToTimestamp(timeValue, baseTimestamp, rollToNextDay) {
   const [hours, minutes, seconds] = timeValue.split(":").map(Number);
   const date = new Date(baseTimestamp);
   date.setHours(hours, minutes, seconds || 0, 0);
-  // * the time input has no date: a time before the recording start is on the next day
-  if (date.getTime() < baseTimestamp) date.setDate(date.getDate() + 1);
+  // * the time input has no date: when the recording crosses midnight, times before its start are on the next day
+  if (rollToNextDay && date.getTime() < baseTimestamp) date.setDate(date.getDate() + 1);
   return date.getTime();
 }
 
@@ -1186,12 +1186,23 @@ function getDownloadRange() {
   if (downloadAllCheckbox.checked) {
     return { start: startTimestamp, end: lastTimestamp };
   }
+  const crossesMidnight =
+    new Date(lastTimestamp).toDateString() !==
+    new Date(startTimestamp).toDateString();
   const start = Math.max(
-    parseTimeInputToTimestamp(downloadStartTime.value, startTimestamp),
+    parseTimeInputToTimestamp(
+      downloadStartTime.value,
+      startTimestamp,
+      crossesMidnight
+    ),
     startTimestamp
   );
   const end = Math.min(
-    parseTimeInputToTimestamp(downloadEndTime.value, startTimestamp),
+    parseTimeInputToTimestamp(
+      downloadEndTime.value,
+      startTimestamp,
+      crossesMidnight
+    ),
     lastTimestamp
   );
   if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
@@ -1249,16 +1260,24 @@ async function saveVideo() {
   /** @type {FileSystemWritableFileStream | null} */
   let writable = null;
   try {
-    let target;
+    /** @type {import("mediabunny").Target | null} */
+    let target = null;
     if (window.showSaveFilePicker) {
-      // * the picker consumes the user activation of the click, so it comes before any other await
-      const handle = await window.showSaveFilePicker({
-        suggestedName: filename,
-        types: [{ description: "WebM", accept: { "video/webm": [".webm"] } }],
-      });
-      writable = await handle.createWritable();
-      target = new Mediabunny.StreamTarget(writable);
-    } else {
+      try {
+        // * the picker consumes the user activation of the click, so it comes before any other await
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: "WebM", accept: { "video/webm": [".webm"] } }],
+        });
+        writable = await handle.createWritable();
+        target = new Mediabunny.StreamTarget(writable);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        // * the picker can fail (e.g. no fileSystem permission): fall back to the in-RAM download
+        console.warn("Could not use the file picker, falling back:", err);
+      }
+    }
+    if (!target) {
       if (range.end - range.start > MAX_BROWSER_DOWNLOAD_DURATION) {
         alert(
           t("player.download_too_long", {
@@ -1285,7 +1304,7 @@ async function saveVideo() {
       triggerDownload(new Blob([target.buffer], { type: "video/webm" }), filename);
     }
   } catch (err) {
-    if (err.name === "AbortError") return;
+    if (err instanceof Error && err.name === "AbortError") return;
     console.error("Error creating the WebM file:", err);
     alert(t("player.download_failed"));
   } finally {

@@ -29,6 +29,7 @@ let streamStartTime = 0;
 let streamLastFrameNumber = -1;
 let streamFrameBusy = false;
 let lastOverlayError = "";
+let lastFrameError = "";
 /** @type {AudioContext | null} */
 let silentAudioContext = null;
 /** @type {"idle" | "connecting" | "live"} */
@@ -205,6 +206,11 @@ async function addStreamFrame() {
       lastOverlayError = message;
     }
     await streamCanvasSource.add(frameNumber / STREAM_FRAME_RATE, 1 / STREAM_FRAME_RATE);
+  } catch (err) {
+    // * the camera or the encoder can hiccup for a single frame: skip it, don't kill the stream
+    const message = err instanceof Error ? err.message : String(err);
+    if (message !== lastFrameError) console.error("Frame skipped:", err);
+    lastFrameError = message;
   } finally {
     streamFrameBusy = false;
   }
