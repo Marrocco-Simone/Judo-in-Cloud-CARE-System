@@ -19,6 +19,8 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+const competitionSlug = urlParams.get("slug");
+const tatamiNumber = urlParams.get("tatami");
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -27,6 +29,8 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  competitionSlug,
+  tatamiNumber,
 });
 
 /** @type {HTMLInputElement} */
@@ -77,6 +81,13 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLInputElement} */
+const slugInput = document.getElementById("slugInput");
+slugInput.value = competitionSlug || "";
+/** @type {HTMLInputElement} */
+const tatamiInput = document.getElementById("tatamiInput");
+tatamiInput.value = tatamiNumber || "";
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -99,6 +110,11 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  if (slugInput.value.trim()) newParams.set("slug", slugInput.value.trim());
+  else newParams.delete("slug");
+  if (tatamiInput.value) newParams.set("tatami", tatamiInput.value);
+  else newParams.delete("tatami");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
@@ -133,17 +149,15 @@ getWebcamStream();
 /** get the webcam stream, save it to the mediaStream and start the mediaRecorder */
 function getWebcamStream() {
   /**
-   * * if there is no deviceId specified, using "true" makes the browser choose the default camera. Works also if the inserted deviceId does not exist
-   * @type {boolean | MediaTrackConstraints}
+   * * without a deviceId the browser chooses the default camera. An unknown deviceId is ignored
+   * @type {MediaTrackConstraints}
    */
-  const video = deviceId
-    ? {
-        deviceId: deviceId,
-        frameRate: {
-          ideal: 60,
-        },
-      }
-    : true;
+  const video = {
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 30 },
+  };
+  if (deviceId) video.deviceId = deviceId;
   navigator.mediaDevices
     .getUserMedia({
       audio: useAudio,
@@ -153,6 +167,7 @@ function getWebcamStream() {
       // todo we can add multiple videotracks in the future
       const videoTrack = stream.getVideoTracks()[0];
       videoTrackLabel = videoTrack.label;
+      console.log("video track settings:", videoTrack.getSettings());
       listAllCameraDevices();
     })
     .catch((err) => {
