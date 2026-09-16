@@ -98,7 +98,8 @@ async function pollLiveState(generation) {
   let state = null;
   try {
     const response = await fetch(
-      `${LIVE_KEEPER_BASE_URL}/live/${encodeURIComponent(competitionSlug)}/${encodeURIComponent(tatamiNumber)}`
+      `${LIVE_KEEPER_BASE_URL}/live/${encodeURIComponent(competitionSlug)}/${encodeURIComponent(tatamiNumber)}`,
+      { signal: AbortSignal.timeout(LIVE_STATE_POLL_MS * 3) }
     );
     const body = await response.json();
     state = body.status === "success" ? body.data : null;

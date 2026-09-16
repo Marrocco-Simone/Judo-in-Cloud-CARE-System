@@ -396,7 +396,8 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb, errorCb)
   const blobStore = transaction.objectStore(collectionName);
   const index = blobStore.index("timestamp");
 
-  const cursorRequest = index.openCursor(null, "prev");
+  // * the first record of a descending cursor bounded above is the nearest one
+  const cursorRequest = index.openCursor(IDBKeyRange.upperBound(targetTimestamp), "prev");
   cursorRequest.addEventListener("error", (e) => {
     console.error("Error searching by timestamp:", e.target.errorCode);
     if (errorCb) errorCb();
@@ -406,15 +407,8 @@ function getNearestBlobByTimestamp(targetTimestamp, collectionName, cb, errorCb)
     const cursor = e.target.result;
     if (cursor) {
       /** @type {{blob: Blob, timestamp: number, id: number}} */
-      const blobRecord = cursor.value;
-
-      if (blobRecord.timestamp <= targetTimestamp) {
-        const { blob, timestamp, id } = blobRecord;
-        cb(blob, timestamp, id);
-        return;
-      } else {
-        cursor.continue();
-      }
+      const { blob, timestamp, id } = cursor.value;
+      cb(blob, timestamp, id);
     } else {
       console.error("No blobs found with a timestamp <=", targetTimestamp);
       if (errorCb) errorCb();
@@ -1356,11 +1350,11 @@ async function assembleBlobsToWebm(blobs, target) {
     output.addAudioTrack(audioSource);
   }
 
-  await output.start();
-
   try {
+    await output.start();
     await copyPackets(blobs, videoSource, audioSource);
   } catch (err) {
+    // * cancel() closes the target: with a StreamTarget the partial file stays on disk
     await output.cancel();
     throw err;
   }
