@@ -496,7 +496,7 @@ video {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  color: #0b5e76;
+  color: white;
   cursor: pointer;
 }
 
@@ -510,20 +510,22 @@ video {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  color: #0b5e76;
+  color: white;
 }
 
 .download-time-label input[type="time"] {
   padding: 0.25rem 0.5rem;
-  border: 1px solid #0b5e76;
+  border: 1px solid white;
   border-radius: 0.25rem;
   font-size: 0.9rem;
+  color: #0b5e76;
+  background-color: white;
 }
 
 .download-time-label input[type="time"]:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
-  background-color: #f0f0f0;
+  color: #6b7f86;
+  background-color: #d5dfe2;
 }
 
 .white-btn {
@@ -557,7 +559,7 @@ video {
 
 .download-progress {
   margin-left: 0.5rem;
-  color: #0b5e76;
+  color: white;
   font-size: 0.9rem;
 }
 
@@ -574,14 +576,14 @@ video {
 }
 
 .stream-status {
-  color: #0b5e76;
+  color: white;
   font-weight: bold;
 }
 .stream-status.live {
-  color: red;
+  color: #ff5252;
 }
 .stream-status.error {
-  color: #c62828;
+  color: #ffab91;
   font-weight: normal;
 }
 
