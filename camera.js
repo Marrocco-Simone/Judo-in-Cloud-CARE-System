@@ -643,7 +643,15 @@ function getWebcamStream() {
       // todo we can add multiple videotracks in the future
       const videoTrack = stream.getVideoTracks()[0];
       videoTrackLabel = videoTrack.label;
-      console.log("video track settings:", videoTrack.getSettings());
+      const settings = videoTrack.getSettings();
+      console.log("video track settings:", settings);
+      cameraInfoElem.textContent = t("player.camera_info", {
+        label: videoTrack.label,
+        width: settings.width,
+        height: settings.height,
+        fps: Math.round(settings.frameRate ?? 0),
+        kbps: Math.round(videoBitsPerSecond / 1000),
+      });
       listAllCameraDevices();
 
       /** holder of the webcam audio and video stream */
@@ -1139,6 +1147,7 @@ const downloadProgress = document.querySelector(".download-progress");
 const downloadAllCheckbox = document.querySelector(".download-all-checkbox");
 const downloadStartTime = document.querySelector(".download-start-time");
 const downloadEndTime = document.querySelector(".download-end-time");
+const cameraInfoElem = document.querySelector(".camera-info");
 
 downloadBtn.addEventListener("click", saveVideo);
 downloadBar.addEventListener("keydown", (e) => e.stopPropagation());
@@ -1149,14 +1158,19 @@ downloadAllCheckbox.addEventListener("change", () => {
   downloadEndTime.disabled = disabled;
 });
 
+/** follows the recording only while "download all" is checked, so typed times are never overwritten */
 function updateDownloadTimeInputs() {
-  if (!startTimestamp || !lastTimestamp) return;
-  downloadStartTime.value = formatTimestamp(startTimestamp);
-  downloadEndTime.value = formatTimestamp(lastTimestamp);
+  if (!startTimestamp || !lastTimestamp || !downloadAllCheckbox.checked) return;
+  downloadStartTime.value = formatTimestamp(startTimestamp).slice(0, 5);
+  downloadEndTime.value = formatTimestamp(lastTimestamp).slice(0, 5);
 }
 
+/** accepts "HH:MM", "HH.MM", "HHMM" and "HH:MM:SS" */
 function parseTimeInputToTimestamp(timeValue, baseTimestamp, rollToNextDay) {
-  const [hours, minutes, seconds] = timeValue.split(":").map(Number);
+  const match = timeValue.trim().match(/^(\d{1,2})[:.]?(\d{2})(?:[:.](\d{2}))?$/);
+  if (!match) return NaN;
+  const [, hours, minutes, seconds] = match.map(Number);
+  if (hours > 23 || minutes > 59 || seconds > 59) return NaN;
   const date = new Date(baseTimestamp);
   date.setHours(hours, minutes, seconds || 0, 0);
   // * the time input has no date: when the recording crosses midnight, times before its start are on the next day

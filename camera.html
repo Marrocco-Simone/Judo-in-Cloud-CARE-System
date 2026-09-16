@@ -346,14 +346,15 @@
           </label>
           <label class="download-time-label">
             <span data-i18n="player.download_start">Start</span>
-            <input type="time" class="download-start-time" step="1" disabled />
+            <input type="text" class="download-start-time" inputmode="numeric" placeholder="HH:MM" maxlength="8" disabled />
           </label>
           <label class="download-time-label">
             <span data-i18n="player.download_end">End</span>
-            <input type="time" class="download-end-time" step="1" disabled />
+            <input type="text" class="download-end-time" inputmode="numeric" placeholder="HH:MM" maxlength="8" disabled />
           </label>
           <button class="white-btn download-btn" data-i18n="player.download">Download</button>
           <span class="download-progress hidden"></span>
+          <span class="camera-info"></span>
         </div>
 
         <div class="streaming-bar hidden">
