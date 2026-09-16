@@ -30,6 +30,9 @@ let streamLastFrameNumber = -1;
 let streamFrameBusy = false;
 let lastOverlayError = "";
 let lastFrameError = "";
+let consecutiveFrameErrors = 0;
+/** frames. A failing encoder rethrows on every add(), so this long a streak means the stream is dead */
+const MAX_CONSECUTIVE_FRAME_ERRORS = STREAM_FRAME_RATE * 2;
 /** @type {AudioContext | null} */
 let silentAudioContext = null;
 /** @type {"idle" | "connecting" | "live"} */
@@ -52,6 +55,12 @@ if (window.electronAPI) {
   });
 }
 
+/** @param {"stream.start" | "stream.stop"} key kept in data-i18n so a language change keeps the right label */
+function setStreamToggleLabel(key) {
+  streamToggleBtn.setAttribute("data-i18n", key);
+  streamToggleBtn.textContent = t(key);
+}
+
 /** @param {"connecting" | "live" | "stopped" | "error"} status */
 function setStreamStatus(status, detail) {
   streamStatusElem.className = `stream-status ${status}`;
@@ -72,7 +81,7 @@ async function startStreaming() {
   const generation = ++streamGeneration;
   setStreamStatus("connecting");
   streamKeyInput.disabled = true;
-  streamToggleBtn.textContent = t("stream.stop");
+  setStreamToggleLabel("stream.stop");
 
   try {
     await connectStream(streamKey, generation);
@@ -136,7 +145,7 @@ async function connectStream(streamKey, generation) {
         ? new NullTarget()
         : new BufferTarget({
             onFinalize: (buffer) =>
-              uploads.run(() => uploadHlsFile(streamKey, path, buffer)),
+              uploads.run(() => uploadHlsFile(streamKey, path, buffer, generation)),
           })
     ),
   });
@@ -163,6 +172,7 @@ async function connectStream(streamKey, generation) {
   streamStartTime = performance.now();
   streamLastFrameNumber = -1;
   streamFrameBusy = false;
+  consecutiveFrameErrors = 0;
   streamFrameTimer = setInterval(
     () => addStreamFrame().catch(failStreaming),
     1000 / STREAM_FRAME_RATE
@@ -174,17 +184,21 @@ async function connectStream(streamKey, generation) {
  * @param {string} streamKey
  * @param {string} filename
  * @param {ArrayBuffer} buffer
+ * @param {number} generation the run that produced the file
  */
-async function uploadHlsFile(streamKey, filename, buffer) {
+async function uploadHlsFile(streamKey, filename, buffer, generation) {
+  const isCurrentRun = generation === streamGeneration;
+  // * the closing playlist of a stopped run must not overwrite the playlist of a newer run
+  if (!isCurrentRun && streamState !== "idle") return;
   try {
     await window.electronAPI.uploadHlsFile(streamKey, filename, buffer);
-    if (streamState === "connecting") {
+    if (isCurrentRun && streamState === "connecting") {
       streamState = "live";
       setStreamStatus("live");
     }
   } catch (err) {
     console.error(`Upload of ${filename} failed:`, err);
-    if (streamState !== "idle") failStreaming(err);
+    if (isCurrentRun && streamState !== "idle") failStreaming(err);
   }
 }
 
@@ -206,11 +220,13 @@ async function addStreamFrame() {
       lastOverlayError = message;
     }
     await streamCanvasSource.add(frameNumber / STREAM_FRAME_RATE, 1 / STREAM_FRAME_RATE);
+    consecutiveFrameErrors = 0;
   } catch (err) {
     // * the camera or the encoder can hiccup for a single frame: skip it, don't kill the stream
     const message = err instanceof Error ? err.message : String(err);
     if (message !== lastFrameError) console.error("Frame skipped:", err);
     lastFrameError = message;
+    if (++consecutiveFrameErrors >= MAX_CONSECUTIVE_FRAME_ERRORS) throw err;
   } finally {
     streamFrameBusy = false;
   }
@@ -262,5 +278,5 @@ function releaseStreamResources() {
   silentAudioContext?.close();
   silentAudioContext = null;
   streamKeyInput.disabled = false;
-  streamToggleBtn.textContent = t("stream.start");
+  setStreamToggleLabel("stream.start");
 }
