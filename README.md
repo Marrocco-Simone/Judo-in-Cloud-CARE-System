@@ -4,7 +4,7 @@
 
 Abbiamo ideato per voi un incredibile CARE System: _Camera Assistant Referee Enhanced_ (supporto camera per arbitri migliorato)!
 
-Il nostro programma è leggero, facile da usare, e idealmente non necessita di scaricare nulla. Si tratta di una pagina web contenente tutto il codice necessario per girare. Una volta aperta la pagina, nessun dato viene mandato o ricevuto da nessun server: funzionerà anche senza connessione!
+Il nostro programma è leggero, facile da usare, e idealmente non necessita di scaricare nulla. Si tratta di una pagina web contenente tutto il codice necessario per girare. Registrazione e riproduzione funzionano anche senza connessione: il video resta sul tuo computer. La connessione serve solo per il tabellone live di Judo in Cloud e per lo streaming su YouTube dall'app desktop.
 
 Per semplificare il lavoro a tutti gli organizzatori ed arbitri, tuttavia, forniamo anche degli eseguibili da scaricare e aprire con un click!
 
