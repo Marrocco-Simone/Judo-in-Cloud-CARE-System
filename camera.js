@@ -19,14 +19,41 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
-const LIVE_TATAMI_BASE_URL = "https://judoincloud.com";
-const competitionSlug = urlParams.get("slug");
-const tatamiNumber = urlParams.get("tatami");
+/** Shiai origin of the tatami link → live-keeper API that holds the match state of that environment */
+const LIVE_KEEPER_API_BY_SHIAI_ORIGIN = {
+  "https://judoincloud.com": "https://live.judoincloud.com/api",
+  "https://www.judoincloud.com": "https://live.judoincloud.com/api",
+  "https://demo.judoincloud.com": "https://livedemo.judoincloud.com/api",
+};
+const liveTatami = parseLiveTatamiLink(urlParams.get("live"));
 /** public Shiai page that mirrors the scoreboard monitor of the tatami */
-const liveUrl =
-  competitionSlug && tatamiNumber
-    ? `${LIVE_TATAMI_BASE_URL}/${encodeURIComponent(competitionSlug)}/tatami/${encodeURIComponent(tatamiNumber)}`
-    : null;
+const liveUrl = liveTatami?.url ?? null;
+const competitionSlug = liveTatami?.slug;
+const tatamiNumber = liveTatami?.tatami;
+const liveKeeperApiUrl = liveTatami?.liveKeeperApiUrl;
+
+/**
+ * @param {string | null} link public Shiai tatami page, e.g. https://demo.judoincloud.com/gara/tatami/2
+ * @returns {{ url: string, slug: string, tatami: string, liveKeeperApiUrl: string } | null}
+ */
+function parseLiveTatamiLink(link) {
+  if (!link) return null;
+  try {
+    const url = new URL(link);
+    const liveKeeperApiUrl = LIVE_KEEPER_API_BY_SHIAI_ORIGIN[url.origin];
+    const match = url.pathname.match(/^\/([^/]+)\/tatami\/(\d+)\/?$/);
+    if (!liveKeeperApiUrl || !match) return null;
+    const [, slug, tatami] = match;
+    return {
+      url: `${url.origin}/${slug}/tatami/${tatami}`,
+      slug: decodeURIComponent(slug),
+      tatami,
+      liveKeeperApiUrl,
+    };
+  } catch {
+    return null;
+  }
+}
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -35,8 +62,7 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
-  competitionSlug,
-  tatamiNumber,
+  liveUrl,
 });
 
 /** @type {HTMLInputElement} */
@@ -88,11 +114,8 @@ const showMoreVideoInfoInput = document.getElementById(
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
 /** @type {HTMLInputElement} */
-const slugInput = document.getElementById("slugInput");
-slugInput.value = competitionSlug || "";
-/** @type {HTMLInputElement} */
-const tatamiInput = document.getElementById("tatamiInput");
-tatamiInput.value = tatamiNumber || "";
+const liveLinkInput = document.getElementById("liveLinkInput");
+liveLinkInput.value = liveUrl || "";
 
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
@@ -117,10 +140,8 @@ function setNewQueryParams(e) {
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
 
-  if (slugInput.value.trim()) newParams.set("slug", slugInput.value.trim());
-  else newParams.delete("slug");
-  if (tatamiInput.value) newParams.set("tatami", tatamiInput.value);
-  else newParams.delete("tatami");
+  if (liveLinkInput.value.trim()) newParams.set("live", liveLinkInput.value.trim());
+  else newParams.delete("live");
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`

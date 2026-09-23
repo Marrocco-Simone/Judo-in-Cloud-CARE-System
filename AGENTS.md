@@ -19,14 +19,14 @@ This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no fr
 - `index.html` + `index.js` — Landing page with settings form, camera device selection, and instructional content. Settings are passed as URL query params when navigating to the camera page.
 - `camera.html` + `camera.js` (~1450 lines) — The main camera application: webcam capture, IndexedDB storage, MediaSource video playback, keyboard/mouse controls, zoom/pan, download.
 - `youtube-stream.js` — YouTube HLS streaming, active only inside Electron. Encodes the camera through a canvas with one hardware H.264 encoder (mediabunny `CanvasSource` + `HlsOutputFormat`, MPEG-TS segments). The Electron main process uploads each segment and playlist to YouTube over IPC (`executable/preload.js` exposes `window.electronAPI.uploadHlsFile`).
-- `scoreboard-overlay.js` — Draws the Shiai second monitor (waiting, pre-fight, match, end screens) as a picture-in-picture box on the stream canvas. Polls the live-keeper state from `live.judoincloud.com` once per second and reconstructs the match and osaekomi clocks like the Shiai live tatami page. It mirrors `shiai/frontend/components/pages/live-tatami` and `match-timer`; the two logos are copied from `shiai/frontend/public`.
+- `scoreboard-overlay.js` — Draws the Shiai second monitor (waiting, pre-fight, match, end screens) as a picture-in-picture box on the stream canvas. Polls the live-keeper state once per second (`live.judoincloud.com` for production, `livedemo.judoincloud.com` for demo) and reconstructs the match and osaekomi clocks like the Shiai live tatami page. It mirrors `shiai/frontend/components/pages/live-tatami` and `match-timer`; the two logos are copied from `shiai/frontend/public`.
 - `styles.css` — Video player styling, controls, forms, timeline, zoom
 - `jic_styles.css` — Shared Judo in Cloud brand styles (header, footer) ported from Tailwind
 - `mediabunny.min.js` — Third-party library (IIFE build, version and build date in the header comment) used for the WebM download remux and the YouTube HLS stream
 
 ### Key Concepts in `camera.js`
 
-- **URL query params** drive configuration: `videoBitsPerSecond`, `REFRESHRATE`, `DELAY_MULTIPLIER`, `useAudio`, `logDatabaseOp`, `showMoreVideoInfo`, `deviceId`, `slug` and `tatami` (Shiai competition slug and tatami number for the live scoreboard iframe). The landing page (`index.js`) builds the query string and navigates to `camera.html`.
+- **URL query params** drive configuration: `videoBitsPerSecond`, `REFRESHRATE`, `DELAY_MULTIPLIER`, `useAudio`, `logDatabaseOp`, `showMoreVideoInfo`, `deviceId`, `live` (link of the public Shiai tatami page, `https://judoincloud.com/{slug}/tatami/{n}` or `https://demo.judoincloud.com/...`; its origin selects the live-keeper through `LIVE_KEEPER_API_BY_SHIAI_ORIGIN`). The landing page (`index.js`) builds the query string and navigates to `camera.html`.
 - **IndexedDB** (`blobStoreDB`): One object store — `streamBlobs` (small chunks at REFRESHRATE for live playback). Blobs are keyed by auto-increment id with a timestamp index.
 - **MediaSource API**: A `SourceBuffer` in `sequence` mode receives blobs from IndexedDB one-by-one on a timer. Buffer is capped at `MAXTIME` seconds to prevent RAM overflow.
 - **Single MediaRecorder**: Records the webcam stream at REFRESHRATE intervals, storing WebM blobs to IndexedDB.
