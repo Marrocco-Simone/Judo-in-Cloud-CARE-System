@@ -45,7 +45,7 @@ const LIVE_STATE_POLL_MS = 1000;
  *   max_osk_time: number,
  *   winner_color?: "WHITE" | "RED",
  *   winner_athlete?: LiveAthlete,
- *   received_at?: number,
+ *   age_ms?: number,
  * }} LiveState
  */
 /** @typedef {{ x: number, y: number, w: number, h: number, vh: number, rem: number }} OverlayBox */
@@ -84,25 +84,23 @@ async function pollLiveState() {
   try {
     const response = await fetch(liveStateUrl, { signal: AbortSignal.timeout(LIVE_STATE_POLL_MS * 3) });
     const body = await response.json();
-    if (body.status === "success") recordLiveState(body.data, body.server_time);
+    if (body.status === "success") recordLiveState(body.data);
   } catch (err) {
     // * a failed poll keeps the last state on screen
   }
   setTimeout(pollLiveState, LIVE_STATE_POLL_MS);
 }
 
-/**
- * @param {LiveState} state
- * @param {number | undefined} serverTime live-keeper clock when it answered
- */
-function recordLiveState(state, serverTime) {
-  const json = JSON.stringify(state);
+/** @param {LiveState} state */
+function recordLiveState(state) {
+  // * age_ms grows at every poll, so it is not part of the state
+  const { age_ms, ...changing } = state;
+  const json = JSON.stringify(changing);
   if (json === lastLiveStateJson) return;
   lastLiveStateJson = json;
-  // * the age comes from the live-keeper clock alone: the clocks of this PC and of the Shiai PC can be minutes apart
-  const age = serverTime && state.received_at ? Math.max(serverTime - state.received_at, 0) : 0;
+  // * the age is on the live-keeper clock: the clocks of this PC and of the Shiai PC can be minutes apart
   const previous = liveHistory.at(-1);
-  const at = Math.max(Date.now() - age, previous?.at ?? 0);
+  const at = Math.max(Date.now() - Math.max(age_ms ?? 0, 0), previous?.at ?? 0);
   liveHistory.push({ at, state, timers: nextLiveTimers(previous?.timers, state.last_event, at) });
 }
 
