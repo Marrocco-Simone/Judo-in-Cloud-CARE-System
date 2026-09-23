@@ -732,7 +732,7 @@ video {
   }
 }
 
-/* Live Scoreboard iframe — PiP in bottom-right corner */
+/* Live Scoreboard canvas — PiP in bottom-right corner */
 .live-scoreboard-canvas {
   position: absolute;
   bottom: 4rem;

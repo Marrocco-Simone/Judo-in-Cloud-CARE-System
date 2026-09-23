@@ -85,7 +85,7 @@ async function pollLiveState() {
     const response = await fetch(liveStateUrl, { signal: AbortSignal.timeout(LIVE_STATE_POLL_MS * 3) });
     const body = await response.json();
     if (body.status === "success") recordLiveState(body.data);
-  } catch (err) {
+  } catch {
     // * a failed poll keeps the last state on screen
   }
   setTimeout(pollLiveState, LIVE_STATE_POLL_MS);

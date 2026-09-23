@@ -627,8 +627,8 @@ function getWebcamStream() {
       console.log("video track settings:", settings);
       cameraInfoElem.textContent = t("player.camera_info", {
         label: videoTrack.label,
-        width: settings.width,
-        height: settings.height,
+        width: settings.width ?? "?",
+        height: settings.height ?? "?",
         fps: Math.round(settings.frameRate ?? 0),
         kbps: Math.round(videoBitsPerSecond / 1000),
       });
@@ -830,6 +830,8 @@ function toggleLiveScoreboard() {
 
 /** the scoreboard at the recording time of the frame on screen, so a rewind shows the old score */
 function drawLiveCanvas() {
+  // * during an append the current timestamp is already one blob ahead of the buffer end
+  if (sourceBuffer?.updating) return;
   const width = Math.round(liveCanvas.clientWidth * devicePixelRatio);
   const height = Math.round(liveCanvas.clientHeight * devicePixelRatio);
   if (!width || !height) return;
@@ -1160,8 +1162,8 @@ downloadAllCheckbox.addEventListener("change", () => {
 /** follows the recording only while "download all" is checked, so typed times are never overwritten */
 function updateDownloadTimeInputs() {
   if (!startTimestamp || !lastTimestamp || !downloadAllCheckbox.checked) return;
-  downloadStartTime.value = formatTimestamp(startTimestamp).slice(0, 5);
-  downloadEndTime.value = formatTimestamp(lastTimestamp).slice(0, 5);
+  downloadStartTime.value = new Date(startTimestamp).toTimeString().slice(0, 5);
+  downloadEndTime.value = new Date(lastTimestamp).toTimeString().slice(0, 5);
 }
 
 /** accepts "HH:MM", "HH.MM", "HHMM" and "HH:MM:SS" */
