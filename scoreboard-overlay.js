@@ -45,27 +45,30 @@ const LIVE_STATE_POLL_MS = 1000;
  *   max_osk_time: number,
  *   winner_color?: "WHITE" | "RED",
  *   winner_athlete?: LiveAthlete,
+ *   received_at?: number,
  * }} LiveState
  */
 /** @typedef {{ x: number, y: number, w: number, h: number, vh: number, rem: number }} OverlayBox */
 
-/** @type {LiveState | null} */
-let liveState = null;
-let liveStatePollTimer = 0;
-/** incremented by every start and stop, so a poll of an old run stops itself */
-let liveScoreboardGeneration = 0;
-let liveScoreboardActive = false;
+/**
+ * Timers reconstructed from the events, like useTimerReconstruction in Shiai. Times are in the clock of this PC.
+ * @typedef {{
+ *   lastEventKey: string,
+ *   matchTime: number,
+ *   matchStart: { startedAt: number, timeAtStart: number, isGs: boolean } | null,
+ *   oskTime: number,
+ *   oskStart: { startedAt: number, timeAtStart: number } | null,
+ * }} LiveTimers
+ */
+/** @typedef {{ at: number, state: LiveState, timers: LiveTimers }} LiveSnapshot */
 
-/** timers reconstructed from the last event, like useTimerReconstruction in Shiai */
-const liveTimers = {
-  lastEventKey: "",
-  matchTime: 0,
-  /** @type {{ startedAt: number, timeAtStart: number, isGs: boolean } | null} */
-  matchStart: null,
-  oskTime: 0,
-  /** @type {{ startedAt: number, timeAtStart: number } | null} */
-  oskStart: null,
-};
+/**
+ * One snapshot for each change of the live state, in time order, so a rewound video shows the scoreboard of its time.
+ * limit: kept in RAM for the page session, so a reload loses the scoreboard of the video recorded before it.
+ * @type {LiveSnapshot[]}
+ */
+const liveHistory = [];
+let lastLiveStateJson = "";
 
 /**
  * @param {string} svg
@@ -77,117 +80,147 @@ function loadSvgImage(svg) {
   return image;
 }
 
-function startLiveScoreboard() {
-  const generation = ++liveScoreboardGeneration;
-  liveScoreboardActive = true;
-  pollLiveState(generation);
-}
-
-function stopLiveScoreboard() {
-  liveScoreboardGeneration++;
-  liveScoreboardActive = false;
-  clearTimeout(liveStatePollTimer);
-  liveState = null;
-  resetLiveTimers();
-}
-
-/** @param {number} generation */
-async function pollLiveState(generation) {
-  /** @type {LiveState | null} */
-  let state = null;
+async function pollLiveState() {
   try {
-    const response = await fetch(
-      `${liveKeeperApiUrl}/live/${encodeURIComponent(competitionSlug)}/${encodeURIComponent(tatamiNumber)}`,
-      { signal: AbortSignal.timeout(LIVE_STATE_POLL_MS * 3) }
-    );
+    const response = await fetch(liveStateUrl, { signal: AbortSignal.timeout(LIVE_STATE_POLL_MS * 3) });
     const body = await response.json();
-    state = body.status === "success" ? body.data : null;
-  } catch {
-    state = null;
+    if (body.status === "success") recordLiveState(body.data, body.server_time);
+  } catch (err) {
+    // * a failed poll keeps the last state on screen
   }
-  if (generation !== liveScoreboardGeneration) return;
-  liveState = state;
-  if (state) updateLiveTimers(state.last_event);
-  liveStatePollTimer = setTimeout(() => pollLiveState(generation), LIVE_STATE_POLL_MS);
+  setTimeout(pollLiveState, LIVE_STATE_POLL_MS);
 }
 
-function resetLiveTimers() {
-  liveTimers.lastEventKey = "";
-  liveTimers.matchTime = 0;
-  liveTimers.matchStart = null;
-  liveTimers.oskTime = 0;
-  liveTimers.oskStart = null;
+/**
+ * @param {LiveState} state
+ * @param {number | undefined} serverTime live-keeper clock when it answered
+ */
+function recordLiveState(state, serverTime) {
+  const json = JSON.stringify(state);
+  if (json === lastLiveStateJson) return;
+  lastLiveStateJson = json;
+  // * the age comes from the live-keeper clock alone: the clocks of this PC and of the Shiai PC can be minutes apart
+  const age = serverTime && state.received_at ? Math.max(serverTime - state.received_at, 0) : 0;
+  const previous = liveHistory.at(-1);
+  const at = Math.max(Date.now() - age, previous?.at ?? 0);
+  liveHistory.push({ at, state, timers: nextLiveTimers(previous?.timers, state.last_event, at) });
 }
 
-/** @param {LiveEvent | undefined} event */
-function updateLiveTimers(event) {
-  if (!event) return;
+/**
+ * @param {number} at time in the clock of this PC
+ * @returns {LiveSnapshot | undefined} the last snapshot at or before the time
+ */
+function liveSnapshotAt(at) {
+  let low = 0;
+  let high = liveHistory.length;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if (liveHistory[middle].at <= at) low = middle + 1;
+    else high = middle;
+  }
+  return liveHistory[low - 1];
+}
+
+/**
+ * @param {LiveTimers | undefined} previous
+ * @param {LiveEvent | undefined} event
+ * @param {number} at time of the event in the clock of this PC
+ * @returns {LiveTimers}
+ */
+function nextLiveTimers(previous, event, at) {
+  /** @type {LiveTimers} */
+  const timers = previous
+    ? { ...previous }
+    : { lastEventKey: "", matchTime: 0, matchStart: null, oskTime: 0, oskStart: null };
+  if (!event) return timers;
   const key = `${event.type}:${event.timestamp}`;
-  if (key === liveTimers.lastEventKey) return;
-  // * a stream that starts mid-match shows the time of the first event instead of 00:00
-  if (!liveTimers.lastEventKey) liveTimers.matchTime = event.match_time_at_event;
-  liveTimers.lastEventKey = key;
+  if (key === timers.lastEventKey) return timers;
+  // * a scoreboard that starts mid-match shows the time of the first event instead of 00:00
+  if (!timers.lastEventKey) timers.matchTime = event.match_time_at_event;
+  timers.lastEventKey = key;
 
   if (event.type === "TIMER_START") {
-    liveTimers.matchStart = {
-      startedAt: event.timestamp,
-      timeAtStart: event.match_time_at_event,
-      isGs: event.is_gs,
-    };
+    timers.matchStart = { startedAt: at, timeAtStart: event.match_time_at_event, isGs: event.is_gs };
   } else if (["TIMER_STOP", "MATCH_END", "MATCH_STARTED"].includes(event.type)) {
-    liveTimers.matchStart = null;
-    liveTimers.matchTime = event.match_time_at_event;
+    timers.matchStart = null;
+    timers.matchTime = event.match_time_at_event;
   } else if (event.type === "GOLDEN_SCORE") {
-    liveTimers.matchTime = event.match_time_at_event;
-  } else if (event.type === "SCORE_CHANGE" && !liveTimers.matchStart) {
-    liveTimers.matchTime = event.match_time_at_event;
+    timers.matchTime = event.match_time_at_event;
+  } else if (event.type === "SCORE_CHANGE" && !timers.matchStart) {
+    timers.matchTime = event.match_time_at_event;
   }
 
   if (event.type === "OSK_START") {
-    liveTimers.oskStart = {
-      startedAt: event.timestamp,
-      timeAtStart: event.osk_time_at_event ?? 0,
-    };
+    timers.oskStart = { startedAt: at, timeAtStart: event.osk_time_at_event ?? 0 };
   } else if (event.type === "OSK_STOP") {
-    liveTimers.oskTime = event.osk_time_at_event ?? currentOskTime();
-    liveTimers.oskStart = null;
+    timers.oskTime = event.osk_time_at_event ?? currentOskTime(timers, at);
+    timers.oskStart = null;
   } else if (event.type === "MATCH_END") {
-    liveTimers.oskStart = null;
-    liveTimers.oskTime = 0;
+    timers.oskStart = null;
+    timers.oskTime = 0;
   }
+  return timers;
 }
 
-function currentMatchTime() {
-  const start = liveTimers.matchStart;
-  if (!start) return liveTimers.matchTime;
-  const elapsed = Math.floor((Date.now() - start.startedAt) / 1000);
+/**
+ * @param {LiveTimers} timers
+ * @param {number} at
+ */
+function currentMatchTime(timers, at) {
+  const start = timers.matchStart;
+  if (!start) return timers.matchTime;
+  const elapsed = Math.max(Math.floor((at - start.startedAt) / 1000), 0);
   return start.isGs ? start.timeAtStart + elapsed : Math.max(start.timeAtStart - elapsed, 0);
 }
 
-function currentOskTime() {
-  const start = liveTimers.oskStart;
-  if (!start) return liveTimers.oskTime;
-  return start.timeAtStart + Math.floor((Date.now() - start.startedAt) / 1000);
+/**
+ * @param {LiveTimers} timers
+ * @param {number} at
+ */
+function currentOskTime(timers, at) {
+  const start = timers.oskStart;
+  if (!start) return timers.oskTime;
+  return start.timeAtStart + Math.max(Math.floor((at - start.startedAt) / 1000), 0);
 }
+
+if (liveStateUrl) pollLiveState();
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * DRAWING
 
 /**
- * Draw the second monitor in the bottom right corner of the frame.
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @returns {OverlayBox}
+ */
+function overlayBox(x, y, w, h) {
+  return { x, y, w, h, vh: h / 100, rem: h / 67.5 };
+}
+
+/**
+ * Draw the second monitor of now in the bottom right corner of the stream frame.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} frameWidth
  * @param {number} frameHeight
  */
 function drawScoreboardOverlay(ctx, frameWidth, frameHeight) {
-  if (!liveScoreboardActive) return;
-
+  if (!liveStateUrl) return;
   const w = Math.round(frameWidth * OVERLAY_WIDTH_RATIO);
   const h = Math.round(w / OVERLAY_ASPECT_RATIO);
   const margin = Math.round(frameHeight * OVERLAY_MARGIN_RATIO);
-  /** @type {OverlayBox} */
-  const box = { x: frameWidth - w - margin, y: frameHeight - h - margin, w, h, vh: h / 100, rem: h / 67.5 };
+  drawScoreboardBox(ctx, overlayBox(frameWidth - w - margin, frameHeight - h - margin, w, h), Date.now());
+}
 
+/**
+ * Draw the second monitor as it was at the given time.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {OverlayBox} box
+ * @param {number} at time in the clock of this PC
+ */
+function drawScoreboardBox(ctx, box, at) {
+  const { w, h } = box;
   ctx.save();
   try {
     ctx.translate(box.x, box.y);
@@ -199,8 +232,9 @@ function drawScoreboardOverlay(ctx, frameWidth, frameHeight) {
     ctx.clip();
     ctx.textBaseline = "middle";
 
-    const state = liveState;
-    if (!state || state.display_state === "waiting") {
+    const snapshot = liveSnapshotAt(at);
+    const state = snapshot?.state;
+    if (!snapshot || state.display_state === "waiting") {
       drawWaitingScreen(ctx, box);
     } else if (state.display_state === "pre_fight") {
       drawPreFightScreen(ctx, box, state);
@@ -208,7 +242,7 @@ function drawScoreboardOverlay(ctx, frameWidth, frameHeight) {
       if (state.winner_athlete && state.winner_color) drawEndScreen(ctx, box, state);
       else drawWaitingScreen(ctx, box);
     } else {
-      drawMatchScreen(ctx, box, state);
+      drawMatchScreen(ctx, box, state, snapshot.timers, at);
     }
   } finally {
     ctx.restore();
@@ -433,8 +467,10 @@ function drawEndScreen(ctx, box, state) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {OverlayBox} box
  * @param {LiveState} state
+ * @param {LiveTimers} timers
+ * @param {number} at
  */
-function drawMatchScreen(ctx, box, state) {
+function drawMatchScreen(ctx, box, state, timers, at) {
   const { w, h, vh, rem } = box;
   const event = state.last_event;
   const columnWidth = w / 6;
@@ -456,9 +492,9 @@ function drawMatchScreen(ctx, box, state) {
     ctx.fillStyle = COLOR_TIMER_RUNNING;
     ctx.fillText("GS", columnWidth * 1.5, topCenterY);
   }
-  const matchTime = currentMatchTime();
+  const matchTime = currentMatchTime(timers, at);
   const clock = `${String(Math.floor(matchTime / 60)).padStart(2, "0")}:${String(matchTime % 60).padStart(2, "0")}`;
-  drawTimerBox(ctx, box, clock, w / 2, topCenterY, 20 * vh, 1 * vh, liveTimers.matchStart !== null);
+  drawTimerBox(ctx, box, clock, w / 2, topCenterY, 20 * vh, 1 * vh, timers.matchStart !== null);
 
   ctx.fillStyle = "black";
   ctx.font = overlayFont("bold", 5 * rem);
@@ -473,7 +509,7 @@ function drawMatchScreen(ctx, box, state) {
 
   drawScoreRow(ctx, box, event.scores, rowTops[1], rowTops[2] - rowTops[1]);
   if (event.osk_owner) {
-    drawOskRow(ctx, box, event.osk_owner, state.max_osk_time, rowTops[2], rowTops[3] - rowTops[2]);
+    drawOskRow(ctx, box, event.osk_owner, state.max_osk_time, rowTops[2], rowTops[3] - rowTops[2], timers, at);
   }
   drawNamesRow(ctx, box, state, rowTops[3], rowTops[4] - rowTops[3]);
 }
@@ -554,8 +590,10 @@ function drawShidoCards(ctx, box, count, centerX, top, height) {
  * @param {number} maxTime
  * @param {number} top
  * @param {number} height
+ * @param {LiveTimers} timers
+ * @param {number} at
  */
-function drawOskRow(ctx, box, owner, maxTime, top, height) {
+function drawOskRow(ctx, box, owner, maxTime, top, height, timers, at) {
   const { w, vh, rem } = box;
   const halfWidth = w / 2;
   const halfX = owner === "RED" ? 0 : halfWidth;
@@ -565,7 +603,7 @@ function drawOskRow(ctx, box, owner, maxTime, top, height) {
   const barWidth = halfWidth * 0.68;
   const timerWidth = halfWidth * 0.28;
   const gap = (halfWidth - barWidth - timerWidth) / 4;
-  const oskTime = currentOskTime();
+  const oskTime = currentOskTime(timers, at);
   const radius = 2.5 * rem;
   const fillWidth = Math.min(oskTime / maxTime, 1) * barWidth;
 
@@ -600,7 +638,7 @@ function drawOskRow(ctx, box, owner, maxTime, top, height) {
     centerY,
     timerSize,
     halfWidth * 0.08,
-    liveTimers.oskStart !== null
+    timers.oskStart !== null
   );
 }
 

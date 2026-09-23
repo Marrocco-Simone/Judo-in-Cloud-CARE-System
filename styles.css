@@ -733,13 +733,13 @@ video {
 }
 
 /* Live Scoreboard iframe — PiP in bottom-right corner */
-.live-scoreboard-iframe {
+.live-scoreboard-canvas {
   position: absolute;
   bottom: 4rem;
   right: 0.5rem;
-  width: 25%;
-  height: 25%;
-  border: none;
+  width: 30%;
+  aspect-ratio: 16 / 9;
+  pointer-events: none;
   z-index: 5;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);

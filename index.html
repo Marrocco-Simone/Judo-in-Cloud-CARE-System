@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="jic_styles.css" />
     <script src="translations.js" defer></script>
+    <script src="live-settings.js" defer></script>
     <script src="index.js" defer></script>
 
     <meta
@@ -248,15 +249,19 @@
           </label>
           <hr />
           <label>
-            <p data-i18n="settings.live_link">Tatami link (Judo in Cloud)</p>
-            <input
-              id="liveLinkInput"
-              class="white-input"
-              type="url"
-              pattern="https:\/\/(www\.|demo\.)?judoincloud\.com\/[^\/]+\/tatami\/\d+\/?"
-              data-i18n-placeholder="settings.live_link_placeholder"
-              data-i18n-title="settings.live_link_hint"
-            />
+            <p data-i18n="settings.live_server">Scoreboard server</p>
+            <select id="liveServerSelect" class="white-input">
+              <option value="live" data-i18n="settings.live_server_live">Live</option>
+              <option value="demo" data-i18n="settings.live_server_demo">Demo</option>
+            </select>
+          </label>
+          <label>
+            <p data-i18n="settings.live_competition">Competition (Judo in Cloud)</p>
+            <select id="liveCompetitionSelect" class="white-input"></select>
+          </label>
+          <label>
+            <p data-i18n="settings.live_tatami">Tatami number</p>
+            <input id="liveTatamiInput" class="white-input" type="number" min="1" step="1" />
           </label>
         </form>
 
