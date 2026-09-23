@@ -15,7 +15,6 @@ const COLOR_OSK_FILL = "orangered";
 const COLOR_TIMER_RUNNING = "yellow";
 const COLOR_TIMER_STOPPED = "red";
 const MAX_SHIDO_CARDS = 3;
-const LIVE_KEEPER_BASE_URL = "https://live.judoincloud.com/api";
 const LIVE_STATE_POLL_MS = 1000;
 
 /** @typedef {{ name: string, surname: string, club: string }} LiveAthlete */
@@ -98,7 +97,7 @@ async function pollLiveState(generation) {
   let state = null;
   try {
     const response = await fetch(
-      `${LIVE_KEEPER_BASE_URL}/live/${encodeURIComponent(competitionSlug)}/${encodeURIComponent(tatamiNumber)}`,
+      `${liveKeeperApiUrl}/live/${encodeURIComponent(competitionSlug)}/${encodeURIComponent(tatamiNumber)}`,
       { signal: AbortSignal.timeout(LIVE_STATE_POLL_MS * 3) }
     );
     const body = await response.json();
