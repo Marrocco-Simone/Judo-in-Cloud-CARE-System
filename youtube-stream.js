@@ -177,7 +177,6 @@ async function connectStream(streamKey, generation) {
     () => addStreamFrame().catch(failStreaming),
     1000 / STREAM_FRAME_RATE
   );
-  if (liveUrl) startLiveScoreboard();
 }
 
 /**
@@ -273,7 +272,6 @@ function releaseStreamResources() {
   streamOutput = null;
   streamCanvasSource = null;
   clearInterval(streamFrameTimer);
-  stopLiveScoreboard();
   streamVideo.srcObject = null;
   silentAudioContext?.close();
   silentAudioContext = null;

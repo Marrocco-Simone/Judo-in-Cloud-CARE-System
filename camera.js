@@ -19,42 +19,6 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
-/** Shiai origin of the tatami link → live-keeper API that holds the match state of that environment */
-const LIVE_KEEPER_API_BY_SHIAI_ORIGIN = {
-  "https://judoincloud.com": "https://live.judoincloud.com/api",
-  "https://www.judoincloud.com": "https://live.judoincloud.com/api",
-  "https://demo.judoincloud.com": "https://livedemo.judoincloud.com/api",
-};
-const liveTatami = parseLiveTatamiLink(urlParams.get("live"));
-/** public Shiai page that mirrors the scoreboard monitor of the tatami */
-const liveUrl = liveTatami?.url ?? null;
-const competitionSlug = liveTatami?.slug;
-const tatamiNumber = liveTatami?.tatami;
-const liveKeeperApiUrl = liveTatami?.liveKeeperApiUrl;
-
-/**
- * @param {string | null} link public Shiai tatami page, e.g. https://demo.judoincloud.com/gara/tatami/2
- * @returns {{ url: string, slug: string, tatami: string, liveKeeperApiUrl: string } | null}
- */
-function parseLiveTatamiLink(link) {
-  if (!link) return null;
-  try {
-    const url = new URL(link);
-    const liveKeeperApiUrl = LIVE_KEEPER_API_BY_SHIAI_ORIGIN[url.origin];
-    const match = url.pathname.match(/^\/([^/]+)\/tatami\/(\d+)\/?$/);
-    if (!liveKeeperApiUrl || !match) return null;
-    const [, slug, tatami] = match;
-    return {
-      url: `${url.origin}/${slug}/tatami/${tatami}`,
-      slug: decodeURIComponent(slug),
-      tatami,
-      liveKeeperApiUrl,
-    };
-  } catch {
-    return null;
-  }
-}
-
 console.log("params: ", {
   videoBitsPerSecond,
   REFRESHRATE,
@@ -62,7 +26,7 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
-  liveUrl,
+  liveStateUrl,
 });
 
 /** @type {HTMLInputElement} */
@@ -113,10 +77,6 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
-/** @type {HTMLInputElement} */
-const liveLinkInput = document.getElementById("liveLinkInput");
-liveLinkInput.value = liveUrl || "";
-
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -140,8 +100,7 @@ function setNewQueryParams(e) {
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
 
-  if (liveLinkInput.value.trim()) newParams.set("live", liveLinkInput.value.trim());
-  else newParams.delete("live");
+  setLiveQueryParams(newParams);
 
   const cameraSelect = document.querySelector(
     `input[name=camera-select]:checked`
@@ -845,26 +804,38 @@ document.addEventListener("fullscreenchange", () => {
 
 /** @type {HTMLButtonElement} */
 const scoreboardBtn = document.querySelector(".scoreboard-btn");
-/** @type {HTMLIFrameElement | null} */
-let liveIframe = null;
+/** @type {HTMLCanvasElement | null} */
+let liveCanvas = null;
+let liveCanvasTimer = 0;
+const LIVE_CANVAS_REDRAW_MS = 200;
 
-if (liveUrl) {
+if (liveStateUrl) {
   scoreboardBtn.style.display = "";
 }
 
 function toggleLiveScoreboard() {
-  if (!liveUrl) return;
-  if (liveIframe) {
-    liveIframe.remove();
-    liveIframe = null;
+  if (!liveStateUrl) return;
+  if (liveCanvas) {
+    clearInterval(liveCanvasTimer);
+    liveCanvas.remove();
+    liveCanvas = null;
   } else {
-    liveIframe = document.createElement("iframe");
-    liveIframe.src = liveUrl;
-    liveIframe.className = "live-scoreboard-iframe";
-    liveIframe.allow = "autoplay";
-    liveIframe.title = t("player.scoreboard");
-    videoContainer.appendChild(liveIframe);
+    liveCanvas = document.createElement("canvas");
+    liveCanvas.className = "live-scoreboard-canvas";
+    videoContainer.appendChild(liveCanvas);
+    liveCanvasTimer = setInterval(drawLiveCanvas, LIVE_CANVAS_REDRAW_MS);
+    drawLiveCanvas();
   }
+}
+
+/** the scoreboard at the recording time of the frame on screen, so a rewind shows the old score */
+function drawLiveCanvas() {
+  const width = Math.round(liveCanvas.clientWidth * devicePixelRatio);
+  const height = Math.round(liveCanvas.clientHeight * devicePixelRatio);
+  if (!width || !height) return;
+  if (liveCanvas.width !== width) liveCanvas.width = width;
+  if (liveCanvas.height !== height) liveCanvas.height = height;
+  drawScoreboardBox(liveCanvas.getContext("2d"), overlayBox(0, 0, width, height), getDisplayedTimestamp());
 }
 
 scoreboardBtn.addEventListener("click", toggleLiveScoreboard);
@@ -935,6 +906,13 @@ function getVideoDuration() {
 
 function getCurrentTime() {
   return (currentTimestamp - startTimestamp) / 1000;
+}
+
+/** recording time of the frame on screen: the end of the buffer is the end of the last appended blob */
+function getDisplayedTimestamp() {
+  if (!video.buffered.length) return currentTimestamp;
+  const bufferEnd = video.buffered.end(video.buffered.length - 1);
+  return currentTimestamp - (bufferEnd - video.currentTime) * 1000;
 }
 
 /** called when a new buffer is added */
