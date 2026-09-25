@@ -50,6 +50,9 @@ const TRANSLATIONS = {
       keyword: "Elimina",
       button: "Elimina",
       wrong_keyword: "Hai scritto male la parola {keyword}, riprova.",
+      done: "Video registrato cancellato.",
+      failed: "Non e' stato possibile cancellare il video registrato.",
+      blocked: "Chiudi la pagina della telecamera: il video viene cancellato appena la chiudi.",
     },
     footer: {
       title: "Judo in Cloud",
@@ -183,6 +186,9 @@ const TRANSLATIONS = {
       keyword: "Delete",
       button: "Delete",
       wrong_keyword: "You typed the word {keyword} incorrectly, please try again.",
+      done: "Recorded video deleted.",
+      failed: "Could not delete the recorded video.",
+      blocked: "Close the camera page: the video is deleted as soon as you close it.",
     },
     footer: {
       title: "Judo in Cloud",
@@ -316,6 +322,9 @@ const TRANSLATIONS = {
       keyword: "Löschen",
       button: "Löschen",
       wrong_keyword: "Sie haben das Wort {keyword} falsch eingegeben, bitte versuchen Sie es erneut.",
+      done: "Aufgenommenes Video gelöscht.",
+      failed: "Das aufgenommene Video konnte nicht gelöscht werden.",
+      blocked: "Schließen Sie die Kameraseite: Das Video wird gelöscht, sobald Sie sie schließen.",
     },
     footer: {
       title: "Judo in Cloud",
@@ -449,6 +458,9 @@ const TRANSLATIONS = {
       keyword: "Eliminar",
       button: "Eliminar",
       wrong_keyword: "Has escrito mal la palabra {keyword}, inténtalo de nuevo.",
+      done: "Vídeo grabado eliminado.",
+      failed: "No se ha podido eliminar el vídeo grabado.",
+      blocked: "Cierra la página de la cámara: el vídeo se elimina en cuanto la cierres.",
     },
     footer: {
       title: "Judo in Cloud",
@@ -582,6 +594,9 @@ const TRANSLATIONS = {
       keyword: "Supprimer",
       button: "Supprimer",
       wrong_keyword: "Vous avez mal écrit le mot {keyword}, veuillez réessayer.",
+      done: "Vidéo enregistrée supprimée.",
+      failed: "Impossible de supprimer la vidéo enregistrée.",
+      blocked: "Fermez la page de la caméra : la vidéo est supprimée dès que vous la fermez.",
     },
     footer: {
       title: "Judo in Cloud",
@@ -715,6 +730,9 @@ const TRANSLATIONS = {
       keyword: "Eliminar",
       button: "Eliminar",
       wrong_keyword: "Escreveu mal a palavra {keyword}, tente novamente.",
+      done: "Vídeo gravado eliminado.",
+      failed: "Não foi possível eliminar o vídeo gravado.",
+      blocked: "Feche a página da câmara: o vídeo é eliminado assim que a fechar.",
     },
     footer: {
       title: "Judo in Cloud",
