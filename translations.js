@@ -123,6 +123,8 @@ const TRANSLATIONS = {
       return_live: "Torna live",
       s: "S",
       scoreboard: "Mostra / nascondi tabellone live",
+      c: "C",
+      clip: "Scarica l'ultimo minuto",
     },
   },
   en: {
@@ -243,6 +245,8 @@ const TRANSLATIONS = {
       return_live: "Return to live",
       s: "S",
       scoreboard: "Show / hide live scoreboard",
+      c: "C",
+      clip: "Download the last minute",
     },
   },
   de: {
@@ -363,6 +367,8 @@ const TRANSLATIONS = {
       return_live: "Zurück zum Live-Stream",
       s: "S",
       scoreboard: "Live-Anzeigetafel ein-/ausblenden",
+      c: "C",
+      clip: "Letzte Minute herunterladen",
     },
   },
 };

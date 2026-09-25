@@ -767,9 +767,11 @@ const keyMap = {
   p: () => changePlaybackSpeed(),
   backspace: () => returnLive(),
   s: () => toggleLiveScoreboard(),
+  c: () => saveLastMinute(),
 };
 
 document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   const key = e.key.toLowerCase();
   if (keyMap[key]) {
     e.preventDefault();
@@ -1150,7 +1152,7 @@ const downloadStartTime = document.querySelector(".download-start-time");
 const downloadEndTime = document.querySelector(".download-end-time");
 const cameraInfoElem = document.querySelector(".camera-info");
 
-downloadBtn.addEventListener("click", saveVideo);
+downloadBtn.addEventListener("click", () => saveVideo());
 downloadBar.addEventListener("keydown", (e) => e.stopPropagation());
 
 downloadAllCheckbox.addEventListener("change", () => {
@@ -1251,17 +1253,29 @@ async function getBlobsBetweenTimestamps(start, end) {
   );
 }
 
+function saveLastMinute() {
+  if (!startTimestamp || !lastTimestamp) {
+    alert(t("error.no_video"));
+    return;
+  }
+  saveVideo({
+    start: Math.max(lastTimestamp - 60 * 1000, startTimestamp),
+    end: lastTimestamp,
+  });
+}
+
 /**
  * Remux the selected range into one WebM file. With the File System API the file
  * streams to disk and has no length limit; otherwise it is built in RAM and capped.
+ * @param {{start: number, end: number}} [fixedRange] replaces the range of the download bar
  */
-async function saveVideo() {
+async function saveVideo(fixedRange) {
   if (!startTimestamp || !lastTimestamp) {
     alert(t("error.no_video"));
     return;
   }
 
-  const range = getDownloadRange();
+  const range = fixedRange ?? getDownloadRange();
   if (!range) return;
 
   const filename = `video_${formatTimestamp(range.start).replaceAll(":", "-")}_${formatTimestamp(range.end).replaceAll(":", "-")}.webm`;
