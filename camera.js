@@ -1126,13 +1126,12 @@ function getVideoTimelinePercent(e) {
 // * delete db
 const deleteFormElement = document.querySelector(".delete-all-data-form");
 const deleteInputElement = document.getElementById("deleteAllDataInput");
-const keyWord = "Elimina";
-deleteInputElement.placeholder = keyWord;
 deleteFormElement.addEventListener("keydown", (e) => e.stopPropagation());
 deleteFormElement.addEventListener("submit", (e) => {
   e.preventDefault();
   const value = deleteInputElement.value;
   deleteInputElement.value = "";
+  const keyWord = t("delete.keyword");
   if (value === keyWord) {
     console.log("delete db");
     db.close();
