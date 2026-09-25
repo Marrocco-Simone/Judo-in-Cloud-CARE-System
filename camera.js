@@ -768,6 +768,11 @@ const keyMap = {
   backspace: () => returnLive(),
   s: () => toggleLiveScoreboard(),
   c: () => saveLastMinute(),
+  "+": () => zoomAtCenter(ZOOM_KEY_STEP),
+  "=": () => zoomAtCenter(ZOOM_KEY_STEP),
+  "-": () => zoomAtCenter(1 / ZOOM_KEY_STEP),
+  0: () => resetZoom(),
+  r: () => resetZoom(),
 };
 
 document.addEventListener("keydown", (e) => {
@@ -845,9 +850,108 @@ function drawLiveCanvas() {
 scoreboardBtn.addEventListener("click", toggleLiveScoreboard);
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// * ZOOM
+
+const MAX_ZOOM = 8;
+const ZOOM_KEY_STEP = 1.25;
+const ZOOM_DRAG_THRESHOLD_PX = 5;
+/** @type {HTMLButtonElement} */
+const zoomBadge = document.querySelector(".zoom-badge");
+
+/**
+ * x and y are fractions of the video size, so the transform stays right when the player resizes.
+ * The video always covers the whole player: x is between 1 - scale and 0.
+ */
+const zoom = { scale: 1, x: 0, y: 0 };
+/** @type {{clientX: number, clientY: number, x: number, y: number} | null} */
+let zoomDragStart = null;
+let zoomDragged = false;
+
+function applyZoom() {
+  zoom.x = Math.min(0, Math.max(1 - zoom.scale, zoom.x));
+  zoom.y = Math.min(0, Math.max(1 - zoom.scale, zoom.y));
+  video.style.transform =
+    zoom.scale === 1
+      ? ""
+      : `translate(${zoom.x * 100}%, ${zoom.y * 100}%) scale(${zoom.scale})`;
+  video.classList.toggle("zoomed", zoom.scale > 1);
+  zoomBadge.style.display = zoom.scale > 1 ? "" : "none";
+  zoomBadge.textContent = `${zoom.scale.toFixed(1)}× ⟲`;
+}
+
+/** keeps the point under the cursor in place */
+function zoomAt(factor, clientX, clientY) {
+  const rect = video.getBoundingClientRect();
+  const newScale = Math.min(MAX_ZOOM, Math.max(1, zoom.scale * factor));
+  const pointX = (clientX - rect.left) / zoom.scale;
+  const pointY = (clientY - rect.top) / zoom.scale;
+  zoom.x += ((zoom.scale - newScale) * pointX) / video.clientWidth;
+  zoom.y += ((zoom.scale - newScale) * pointY) / video.clientHeight;
+  zoom.scale = newScale;
+  applyZoom();
+}
+
+function zoomAtCenter(factor) {
+  const rect = videoContainer.getBoundingClientRect();
+  zoomAt(factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+function resetZoom() {
+  zoom.scale = 1;
+  applyZoom();
+}
+
+video.addEventListener(
+  "wheel",
+  (e) => {
+    e.preventDefault();
+    // * Firefox can report the wheel in lines instead of pixels
+    const deltaPx = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 40 : e.deltaY;
+    zoomAt(Math.exp(-deltaPx * 0.002), e.clientX, e.clientY);
+  },
+  { passive: false }
+);
+
+video.addEventListener("pointerdown", (e) => {
+  zoomDragged = false;
+  zoomDragStart =
+    e.button === 0 && zoom.scale > 1
+      ? { clientX: e.clientX, clientY: e.clientY, x: zoom.x, y: zoom.y }
+      : null;
+});
+
+video.addEventListener("pointermove", (e) => {
+  if (!zoomDragStart) return;
+  const dx = e.clientX - zoomDragStart.clientX;
+  const dy = e.clientY - zoomDragStart.clientY;
+  // * a small movement is still a click, which plays and pauses
+  if (!zoomDragged && Math.hypot(dx, dy) < ZOOM_DRAG_THRESHOLD_PX) return;
+  if (!zoomDragged) {
+    zoomDragged = true;
+    video.setPointerCapture(e.pointerId);
+    video.classList.add("dragging");
+  }
+  zoom.x = zoomDragStart.x + dx / video.clientWidth;
+  zoom.y = zoomDragStart.y + dy / video.clientHeight;
+  applyZoom();
+});
+
+for (const type of ["pointerup", "pointercancel"]) {
+  video.addEventListener(type, () => {
+    zoomDragStart = null;
+    video.classList.remove("dragging");
+  });
+}
+
+video.addEventListener("dblclick", resetZoom);
+zoomBadge.addEventListener("click", resetZoom);
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // * PLAY / PAUSE
 
-video.addEventListener("click", togglePlay);
+video.addEventListener("click", () => {
+  if (!zoomDragged) togglePlay();
+});
 playPauseBtn.addEventListener("click", togglePlay);
 
 function togglePlay() {

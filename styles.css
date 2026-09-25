@@ -26,6 +26,29 @@ body {
 
 video {
   width: 100%;
+  transform-origin: 0 0;
+}
+
+video.zoomed {
+  cursor: grab;
+}
+
+video.dragging {
+  cursor: grabbing;
+}
+
+.zoom-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 5;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
 }
 
 .video-logo {
