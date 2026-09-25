@@ -560,6 +560,16 @@ video {
   cursor: not-allowed;
 }
 
+.download-folder-btn {
+  margin-left: 0.5rem;
+}
+
+.download-folder-name {
+  margin-left: 0.5rem;
+  color: white;
+  font-size: 0.9rem;
+}
+
 .download-progress {
   margin-left: 0.5rem;
   color: white;
