@@ -194,6 +194,25 @@ function listAllCameraDevices() {
   });
 }
 
+// ! Delete all recorded video
+const deleteFormElement = document.querySelector(".delete-all-data-form");
+const deleteInputElement = document.getElementById("deleteAllDataInput");
+deleteFormElement.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const value = deleteInputElement.value;
+  deleteInputElement.value = "";
+  const keyWord = t("delete.keyword");
+  if (value.trim().toLowerCase() !== keyWord.toLowerCase()) {
+    alert(t("delete.wrong_keyword", { keyword: keyWord }));
+    return;
+  }
+  const request = indexedDB.deleteDatabase("blobStoreDB");
+  request.addEventListener("success", () => alert(t("delete.done")));
+  request.addEventListener("error", () => alert(t("delete.failed")));
+  // * an open camera page keeps the database open: the deletion waits until it closes
+  request.addEventListener("blocked", () => alert(t("delete.blocked")));
+});
+
 // ! Language selector
 function initLanguageSelector() {
   const langSelect = document.getElementById("language-select");
