@@ -26,13 +26,13 @@ const TRANSLATIONS = {
     settings: {
       title: "Impostazioni registrazione",
       confirm: "Conferma",
-      reset: "Reset",
-      cameras: "Cameras",
-      cameras_loading: "Loading cameras...",
+      reset: "Ripristina",
+      cameras: "Telecamere",
+      cameras_loading: "Caricamento telecamere...",
       bitrate: "Bitrate",
       use_audio: "Usa audio",
-      frame_size: "Frame size",
-      more_info: "More video info",
+      frame_size: "Risoluzione",
+      more_info: "Altre info sul video",
       delay_multiplier: "Moltiplicatore ritardo",
       live_server: "Server del tabellone live",
       live_server_live: "Live",
@@ -42,7 +42,7 @@ const TRANSLATIONS = {
       live_competitions_loading: "Caricamento gare...",
       live_competitions_error: "Impossibile caricare le gare",
       live_tatami: "Numero tatami",
-      log_db: "Log database operations",
+      log_db: "Log delle operazioni sul database",
     },
     delete: {
       title: "Cancella tutto il video registrato",
@@ -55,6 +55,7 @@ const TRANSLATIONS = {
       title: "Judo in Cloud",
       subtitle: "Un servizio fatto su misura per te!",
       contacts: "Contatti",
+      personal_page: "Pagina personale",
       collaboration: "In collaborazione con",
       thanks: "Si ringraziano",
       faq: "FAQ",
@@ -87,7 +88,7 @@ const TRANSLATIONS = {
     player: {
       live: "LIVE",
       speed: "1x",
-      download: "Download",
+      download: "Scarica",
       download_all: "Scarica tutto",
       download_folder: "Cartella",
       download_folder_title: "Scegli una cartella: i download vengono salvati li' senza chiedere dove",
@@ -101,7 +102,7 @@ const TRANSLATIONS = {
       download_progress: "Creazione file {current}/{total}...",
       download_finalizing: "Finalizzazione del file...",
       scoreboard_key: "Tabellone live (S)",
-      zoom_reset: "Reset zoom (R)",
+      zoom_reset: "Ripristina zoom (R)",
       dropped_frames: "Stai perdendo troppi frame ({percent}%). Abbassa i \"videoBitsPerSecond\" sotto a: {bitrate}",
     },
     shortcuts: {
@@ -134,7 +135,7 @@ const TRANSLATIONS = {
       drag: "Trascina il video (con lo zoom)",
       move: "Sposta il video",
       r: "R / 0 / doppio clic",
-      reset_zoom: "Reset zoom",
+      reset_zoom: "Ripristina zoom",
     },
   },
   en: {
@@ -187,6 +188,7 @@ const TRANSLATIONS = {
       title: "Judo in Cloud",
       subtitle: "A service tailored for you!",
       contacts: "Contacts",
+      personal_page: "Personal page",
       collaboration: "In collaboration with",
       thanks: "Special thanks to",
       faq: "FAQ",
@@ -319,6 +321,7 @@ const TRANSLATIONS = {
       title: "Judo in Cloud",
       subtitle: "Ein Service, der auf Sie zugeschnitten ist!",
       contacts: "Kontakt",
+      personal_page: "Persönliche Seite",
       collaboration: "In Zusammenarbeit mit",
       thanks: "Besonderer Dank an",
       faq: "FAQ",
@@ -451,6 +454,7 @@ const TRANSLATIONS = {
       title: "Judo in Cloud",
       subtitle: "¡Un servicio a tu medida!",
       contacts: "Contactos",
+      personal_page: "Página personal",
       collaboration: "En colaboración con",
       thanks: "Agradecimientos especiales a",
       faq: "FAQ",
@@ -583,6 +587,7 @@ const TRANSLATIONS = {
       title: "Judo in Cloud",
       subtitle: "Un service conçu pour vous !",
       contacts: "Contacts",
+      personal_page: "Page personnelle",
       collaboration: "En collaboration avec",
       thanks: "Remerciements particuliers à",
       faq: "FAQ",
@@ -715,6 +720,7 @@ const TRANSLATIONS = {
       title: "Judo in Cloud",
       subtitle: "Um serviço feito à sua medida!",
       contacts: "Contactos",
+      personal_page: "Página pessoal",
       collaboration: "Em colaboração com",
       thanks: "Agradecimentos especiais a",
       faq: "FAQ",
@@ -907,10 +913,7 @@ function initTranslations() {
     langSelect.value = savedLang;
   }
 
-  // Apply translations if not Italian (Italian is default in HTML)
-  if (savedLang !== "it") {
-    setLanguage(savedLang);
-  }
+  setLanguage(savedLang);
 }
 
 // Auto-initialize on DOMContentLoaded, or immediately if DOM is already ready
