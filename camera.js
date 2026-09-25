@@ -1155,6 +1155,76 @@ const cameraInfoElem = document.querySelector(".camera-info");
 downloadBtn.addEventListener("click", () => saveVideo());
 downloadBar.addEventListener("keydown", (e) => e.stopPropagation());
 
+// * the folder handle is kept in its own database, so deleting the recordings keeps it
+const settingsDbPromise = new Promise((resolve, reject) => {
+  const request = indexedDB.open("careSettingsDB", 1);
+  request.onupgradeneeded = () => request.result.createObjectStore("settings");
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+
+/**
+ * @param {IDBTransactionMode} mode
+ * @param {(store: IDBObjectStore) => IDBRequest} makeRequest
+ */
+async function settingsRequest(mode, makeRequest) {
+  const settingsDb = await settingsDbPromise;
+  return new Promise((resolve, reject) => {
+    const request = makeRequest(
+      settingsDb.transaction("settings", mode).objectStore("settings")
+    );
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+const downloadFolderBtn = document.querySelector(".download-folder-btn");
+const downloadFolderName = document.querySelector(".download-folder-name");
+/** @type {FileSystemDirectoryHandle | undefined} */
+let downloadFolder;
+
+if (window.showDirectoryPicker) {
+  downloadFolderBtn.style.display = "";
+  settingsRequest("readonly", (store) => store.get("downloadFolder"))
+    .then((handle) => {
+      downloadFolder = handle;
+      downloadFolderName.textContent = handle?.name ?? "";
+    })
+    .catch(console.error);
+}
+
+downloadFolderBtn.addEventListener("click", async () => {
+  try {
+    const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+    await settingsRequest("readwrite", (store) =>
+      store.put(handle, "downloadFolder")
+    );
+    downloadFolder = handle;
+    downloadFolderName.textContent = handle.name;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return;
+    console.error("Could not set the download folder:", err);
+  }
+});
+
+/**
+ * Without a download folder, or without permission to write in it, asks with the save picker.
+ * @param {string} filename
+ * @returns {Promise<FileSystemFileHandle>}
+ */
+async function getSaveFileHandle(filename) {
+  if (
+    downloadFolder &&
+    (await downloadFolder.requestPermission({ mode: "readwrite" })) === "granted"
+  ) {
+    return downloadFolder.getFileHandle(filename, { create: true });
+  }
+  return window.showSaveFilePicker({
+    suggestedName: filename,
+    types: [{ description: "WebM", accept: { "video/webm": [".webm"] } }],
+  });
+}
+
 downloadAllCheckbox.addEventListener("change", () => {
   const disabled = downloadAllCheckbox.checked;
   downloadStartTime.disabled = disabled;
@@ -1287,11 +1357,8 @@ async function saveVideo(fixedRange) {
     let target = null;
     if (window.showSaveFilePicker) {
       try {
-        // * the picker consumes the user activation of the click, so it comes before any other await
-        const handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{ description: "WebM", accept: { "video/webm": [".webm"] } }],
-        });
+        // * the picker and the permission prompt consume the user activation, so they come before any other await
+        const handle = await getSaveFileHandle(filename);
         writable = await handle.createWritable();
         target = new Mediabunny.StreamTarget(writable);
       } catch (err) {
