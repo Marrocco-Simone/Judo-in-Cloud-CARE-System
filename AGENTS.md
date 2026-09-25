@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Recording and playback run offline in the browser. The only network traffic is optional: the live scoreboard (Shiai competition list and live-keeper state) and the YouTube HLS upload from the Electron app. It is hosted at `care.judoincloud.com` and also distributed as an Electron desktop app.
 
-Language: Italian, English, German (UI now supports multiple languages via translations.js).
+Language: Italian, English, German, Spanish, French, Portuguese (UI now supports multiple languages via translations.js).
 
 ## Architecture
 
