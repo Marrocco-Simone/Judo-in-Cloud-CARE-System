@@ -1132,7 +1132,7 @@ deleteFormElement.addEventListener("submit", (e) => {
   const value = deleteInputElement.value;
   deleteInputElement.value = "";
   const keyWord = t("delete.keyword");
-  if (value === keyWord) {
+  if (value.trim().toLowerCase() === keyWord.toLowerCase()) {
     console.log("delete db");
     db.close();
     db = null;
