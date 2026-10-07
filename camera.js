@@ -1123,9 +1123,13 @@ let recordingWindowStart = performance.now();
 let recordingWindowBytes = storeStats.bytes;
 let recordingWindowErrors = storeStats.errors;
 setInterval(() => {
-  const stoppedS = storeStats.lastStoredAt
-    ? Math.round((Date.now() - storeStats.lastStoredAt) / 1000)
-    : 0;
+  const now = performance.now();
+  // * the window starts with the first chunk, so a late or missing camera does not read as a slow PC
+  if (!storeStats.lastStoredAt) {
+    recordingWindowStart = now;
+    return;
+  }
+  const stoppedS = Math.round((Date.now() - storeStats.lastStoredAt) / 1000);
   setWarning(
     "stopped",
     stoppedS > RECORDING_STOPPED_S
@@ -1133,7 +1137,6 @@ setInterval(() => {
       : null
   );
 
-  const now = performance.now();
   if (now - recordingWindowStart < RECORDING_WINDOW_MS) return;
   const kbps = Math.round(
     ((storeStats.bytes - recordingWindowBytes) * 8) / (now - recordingWindowStart)

@@ -247,7 +247,7 @@ const TRANSLATIONS = {
       zoom_reset: "Reset zoom (R)",
       dropped_frames: "Too many dropped frames ({percent}%). Lower \"videoBitsPerSecond\" below: {bitrate}",
       low_bitrate: "The PC records at {kbps} kbit/s instead of {target} kbit/s: it cannot encode the video with these settings. Close the other programs or use a more powerful PC.",
-      recording_stopped: "The recording has been stopped for {seconds} seconds. Reload the page.",
+      recording_stopped: "Nothing has been recorded for {seconds} seconds. Reload the page.",
       store_errors: "{count} parts of the video were not saved in the last minute. Check the free disk space.",
     },
     shortcuts: {
