@@ -97,8 +97,10 @@ ipcMain.on("care:status", async (_event, status) => {
   try {
     failedUploadTimes = failedUploadTimes.filter((t) => t > Date.now() - 60_000);
     const metrics = app.getAppMetrics();
-    // * percentCPUUsage is relative to one core and covers the time since the previous call
-    const cpuPct = metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) / os.cpus().length;
+    // * percentCPUUsage covers the time since the previous call. On Windows it is already a
+    // * percent of all cores, elsewhere a percent of one core
+    const cores = process.platform === "win32" ? 1 : os.cpus().length;
+    const cpuPct = metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) / cores;
     const snapshot = {
       ...status,
       ver: app.getVersion(),
