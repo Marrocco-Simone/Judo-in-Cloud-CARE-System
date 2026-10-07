@@ -35,7 +35,7 @@ This is a **vanilla HTML/CSS/JS** project — no build system, no bundler, no fr
 - **WebM Download**: Uses MediaBunny (`mediabunny.min.js`) to remux a time range of WebM blobs from IndexedDB into one WebM file, without re-encoding. With the File System API the file streams to disk through `showSaveFilePicker`; otherwise it is built in RAM with a 15-minute cap.
 - **Zoom/Pan**: one `zoom` state (`scale`, and `x`/`y` as fractions of the video size) applied as `translate(%) scale()` on the player `<video>`. The mouse wheel zooms on the cursor, left-drag pans when zoomed, the video always covers the player. The zoom is CSS only: the YouTube stream, the scoreboard canvas and the downloads are not zoomed.
 - **Blob prefetch/cache**: Blobs are prefetched from IndexedDB ahead of playback position to reduce latency during rewind and seek operations.
-- **Warnings above the player** (`setWarning` in `camera.js`, one red box): dropped frames over 10 % in playback, no chunk stored for more than 10 s, a stored bitrate under half of `videoBitsPerSecond` in the last minute (the PC cannot encode in real time), and store errors in the last minute. Percentages show two decimals.
+- **Warnings above the player** (`setWarning` in `camera.js`, one red box): only problems that the user can fix with `videoBitsPerSecond`. Dropped frames over 10 % in playback, and a stored bitrate under half of `videoBitsPerSecond` in the last minute (the PC cannot encode in real time). Percentages show two decimals. Store errors and a stopped recording go only to the PC Health Broadcaster through `care-status.js`.
 
 ### Electron Wrapper (`executable/`)
 

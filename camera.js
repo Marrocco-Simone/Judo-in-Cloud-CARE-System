@@ -1114,14 +1114,11 @@ function setWarning(kind, text) {
   warningElem.classList.toggle("hidden", warnings.size === 0);
 }
 
-/** seconds without a stored chunk before the recording counts as stopped */
-const RECORDING_STOPPED_S = 10;
 /** a stored bitrate under this share of videoBitsPerSecond means the PC cannot encode in real time */
 const LOW_BITRATE_RATIO = 0.5;
 const RECORDING_WINDOW_MS = 60_000;
 let recordingWindowStart = performance.now();
 let recordingWindowBytes = storeStats.bytes;
-let recordingWindowErrors = storeStats.errors;
 setInterval(() => {
   const now = performance.now();
   // * the window starts with the first chunk, so a late or missing camera does not read as a slow PC
@@ -1129,34 +1126,19 @@ setInterval(() => {
     recordingWindowStart = now;
     return;
   }
-  const stoppedS = Math.round((Date.now() - storeStats.lastStoredAt) / 1000);
-  setWarning(
-    "stopped",
-    stoppedS > RECORDING_STOPPED_S
-      ? t("player.recording_stopped", { seconds: stoppedS })
-      : null
-  );
-
   if (now - recordingWindowStart < RECORDING_WINDOW_MS) return;
   const kbps = Math.round(
     ((storeStats.bytes - recordingWindowBytes) * 8) / (now - recordingWindowStart)
   );
-  const targetKbps = videoBitsPerSecond / 1000;
   setWarning(
     "bitrate",
-    kbps < targetKbps * LOW_BITRATE_RATIO
-      ? t("player.low_bitrate", { kbps, target: targetKbps })
+    kbps < (videoBitsPerSecond / 1000) * LOW_BITRATE_RATIO
+      ? t("player.low_bitrate", { kbps })
       : null
-  );
-  const errors = storeStats.errors - recordingWindowErrors;
-  setWarning(
-    "store",
-    errors > 0 ? t("player.store_errors", { count: errors }) : null
   );
   recordingWindowStart = now;
   recordingWindowBytes = storeStats.bytes;
-  recordingWindowErrors = storeStats.errors;
-}, RECORDING_STOPPED_S * 1000);
+}, 10_000);
 
 function checkVideoIsGoingOn() {
   try {
