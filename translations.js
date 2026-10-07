@@ -107,6 +107,9 @@ const TRANSLATIONS = {
       scoreboard_key: "Tabellone live (S)",
       zoom_reset: "Ripristina zoom (R)",
       dropped_frames: "Stai perdendo troppi frame ({percent}%). Abbassa i \"videoBitsPerSecond\" sotto a: {bitrate}",
+      low_bitrate: "Il PC registra a {kbps} kbit/s invece di {target} kbit/s: non riesce a codificare il video con queste impostazioni. Chiudi gli altri programmi o usa un PC piu' potente.",
+      recording_stopped: "La registrazione e' ferma da {seconds} secondi. Ricarica la pagina.",
+      store_errors: "{count} parti del video non sono state salvate nell'ultimo minuto. Controlla lo spazio libero sul disco.",
     },
     shortcuts: {
       title_key: "Tasto",
@@ -243,6 +246,9 @@ const TRANSLATIONS = {
       scoreboard_key: "Live scoreboard (S)",
       zoom_reset: "Reset zoom (R)",
       dropped_frames: "Too many dropped frames ({percent}%). Lower \"videoBitsPerSecond\" below: {bitrate}",
+      low_bitrate: "The PC records at {kbps} kbit/s instead of {target} kbit/s: it cannot encode the video with these settings. Close the other programs or use a more powerful PC.",
+      recording_stopped: "The recording has been stopped for {seconds} seconds. Reload the page.",
+      store_errors: "{count} parts of the video were not saved in the last minute. Check the free disk space.",
     },
     shortcuts: {
       title_key: "Key",
@@ -379,6 +385,9 @@ const TRANSLATIONS = {
       scoreboard_key: "Live-Anzeigetafel (S)",
       zoom_reset: "Zoom zurücksetzen (R)",
       dropped_frames: "Zu viele verlorene Frames ({percent}%). Senken Sie \"videoBitsPerSecond\" unter: {bitrate}",
+      low_bitrate: "Der PC nimmt mit {kbps} kbit/s statt {target} kbit/s auf: Er kann das Video mit diesen Einstellungen nicht kodieren. Schließen Sie die anderen Programme oder verwenden Sie einen leistungsstärkeren PC.",
+      recording_stopped: "Die Aufnahme ist seit {seconds} Sekunden angehalten. Laden Sie die Seite neu.",
+      store_errors: "{count} Teile des Videos wurden in der letzten Minute nicht gespeichert. Prüfen Sie den freien Speicherplatz.",
     },
     shortcuts: {
       title_key: "Taste",
@@ -515,6 +524,9 @@ const TRANSLATIONS = {
       scoreboard_key: "Marcador en directo (S)",
       zoom_reset: "Restablecer zoom (R)",
       dropped_frames: "Demasiados fotogramas perdidos ({percent}%). Baja \"videoBitsPerSecond\" por debajo de: {bitrate}",
+      low_bitrate: "El PC graba a {kbps} kbit/s en lugar de {target} kbit/s: no puede codificar el vídeo con esta configuración. Cierra los otros programas o usa un PC más potente.",
+      recording_stopped: "La grabación está detenida desde hace {seconds} segundos. Recarga la página.",
+      store_errors: "{count} partes del vídeo no se guardaron en el último minuto. Comprueba el espacio libre en el disco.",
     },
     shortcuts: {
       title_key: "Tecla",
@@ -651,6 +663,9 @@ const TRANSLATIONS = {
       scoreboard_key: "Score en direct (S)",
       zoom_reset: "Réinitialiser le zoom (R)",
       dropped_frames: "Trop d'images perdues ({percent} %). Baissez \"videoBitsPerSecond\" en dessous de : {bitrate}",
+      low_bitrate: "Le PC enregistre à {kbps} kbit/s au lieu de {target} kbit/s : il ne peut pas encoder la vidéo avec ces réglages. Fermez les autres programmes ou utilisez un PC plus puissant.",
+      recording_stopped: "L'enregistrement est arrêté depuis {seconds} secondes. Rechargez la page.",
+      store_errors: "{count} parties de la vidéo n'ont pas été enregistrées dans la dernière minute. Vérifiez l'espace libre sur le disque.",
     },
     shortcuts: {
       title_key: "Touche",
@@ -787,6 +802,9 @@ const TRANSLATIONS = {
       scoreboard_key: "Marcador ao vivo (S)",
       zoom_reset: "Repor o zoom (R)",
       dropped_frames: "Demasiados fotogramas perdidos ({percent}%). Baixe \"videoBitsPerSecond\" para menos de: {bitrate}",
+      low_bitrate: "O PC grava a {kbps} kbit/s em vez de {target} kbit/s: não consegue codificar o vídeo com estas definições. Feche os outros programas ou use um PC mais potente.",
+      recording_stopped: "A gravação está parada há {seconds} segundos. Recarregue a página.",
+      store_errors: "{count} partes do vídeo não foram guardadas no último minuto. Verifique o espaço livre no disco.",
     },
     shortcuts: {
       title_key: "Tecla",

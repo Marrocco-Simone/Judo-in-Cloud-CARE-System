@@ -714,6 +714,7 @@ video.dragging {
 }
 
 .dropped-frames-warning {
+  white-space: pre-line;
   background-color: red;
   color: black;
   font-weight: bold;

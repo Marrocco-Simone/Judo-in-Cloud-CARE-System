@@ -699,7 +699,13 @@ function createMediaRecorder(mediaStream, refreshRate, collectionName) {
   mediaRecorder.addEventListener("stop", () => {
     const blob = new Blob(blobs, { type: mimeType });
     // console.log(`final blob size: ${Math.floor(blob.size / 1000)} kb`);
-    storeBlob(blob, collectionName);
+    // * a throw here would skip the restart below and stop the recording for good
+    try {
+      storeBlob(blob, collectionName);
+    } catch (e) {
+      storeStats.errors++;
+      console.error("Error storing blob:", e);
+    }
     blobs.length = 0;
     mediaRecorder.start(refreshRate);
   });
@@ -1086,15 +1092,68 @@ video.addEventListener("timeupdate", () => {
 
   if (droppedFramesPercentage > 10) {
     const warning = t("player.dropped_frames", {
-      percent: droppedFramesPercentage.toFixed(1),
+      percent: droppedFramesPercentage.toFixed(2),
       bitrate: videoBitsPerSecond / 1000 / 2,
     });
     console.log(warning);
-    const warningElem = document.querySelector(".dropped-frames-warning");
-    warningElem.textContent = warning;
-    warningElem.classList.remove("hidden");
+    setWarning("drop", warning);
   }
 });
+
+const warningElem = document.querySelector(".dropped-frames-warning");
+/** warnings shown above the player, by kind @type {Map<string, string>} */
+const warnings = new Map();
+/**
+ * @param {string} kind
+ * @param {string | null} text null removes the warning
+ */
+function setWarning(kind, text) {
+  if (text === null) warnings.delete(kind);
+  else warnings.set(kind, text);
+  warningElem.textContent = [...warnings.values()].join("\n");
+  warningElem.classList.toggle("hidden", warnings.size === 0);
+}
+
+/** seconds without a stored chunk before the recording counts as stopped */
+const RECORDING_STOPPED_S = 10;
+/** a stored bitrate under this share of videoBitsPerSecond means the PC cannot encode in real time */
+const LOW_BITRATE_RATIO = 0.5;
+const RECORDING_WINDOW_MS = 60_000;
+let recordingWindowStart = performance.now();
+let recordingWindowBytes = storeStats.bytes;
+let recordingWindowErrors = storeStats.errors;
+setInterval(() => {
+  const stoppedS = storeStats.lastStoredAt
+    ? Math.round((Date.now() - storeStats.lastStoredAt) / 1000)
+    : 0;
+  setWarning(
+    "stopped",
+    stoppedS > RECORDING_STOPPED_S
+      ? t("player.recording_stopped", { seconds: stoppedS })
+      : null
+  );
+
+  const now = performance.now();
+  if (now - recordingWindowStart < RECORDING_WINDOW_MS) return;
+  const kbps = Math.round(
+    ((storeStats.bytes - recordingWindowBytes) * 8) / (now - recordingWindowStart)
+  );
+  const targetKbps = videoBitsPerSecond / 1000;
+  setWarning(
+    "bitrate",
+    kbps < targetKbps * LOW_BITRATE_RATIO
+      ? t("player.low_bitrate", { kbps, target: targetKbps })
+      : null
+  );
+  const errors = storeStats.errors - recordingWindowErrors;
+  setWarning(
+    "store",
+    errors > 0 ? t("player.store_errors", { count: errors }) : null
+  );
+  recordingWindowStart = now;
+  recordingWindowBytes = storeStats.bytes;
+  recordingWindowErrors = storeStats.errors;
+}, RECORDING_STOPPED_S * 1000);
 
 function checkVideoIsGoingOn() {
   try {

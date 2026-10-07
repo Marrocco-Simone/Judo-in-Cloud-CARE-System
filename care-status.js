@@ -83,7 +83,7 @@ function startCareStatus() {
     const quality = video.getVideoPlaybackQuality();
     const total = quality.totalVideoFrames - lastQuality.totalVideoFrames;
     const dropped = quality.droppedVideoFrames - lastQuality.droppedVideoFrames;
-    minute.drop = total > 0 ? round1((dropped / total) * 100) : null;
+    minute.drop = total > 0 ? Math.round((dropped / total) * 10000) / 100 : null;
     lastQuality = quality;
 
     minute.camEv = camEvents;

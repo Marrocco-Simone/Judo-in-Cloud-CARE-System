@@ -106,7 +106,7 @@ ipcMain.on("care:status", async (_event, status) => {
       ver: app.getVersion(),
       up: Math.round(process.uptime()),
       upFail: failedUploadTimes.length,
-      cpu: Math.round(cpuPct * 10) / 10,
+      cpu: Math.round(cpuPct * 100) / 100,
       memMB: Math.round(metrics.reduce((sum, m) => sum + m.memory.workingSetSize, 0) / 1024),
     };
     // * the rename replaces the file in one step, so the broadcaster never reads half of it
