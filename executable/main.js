@@ -91,31 +91,27 @@ async function putHlsFile(url, body, filename) {
 
 // * read by the PC Health Broadcaster on the same PC
 const CARE_STATUS_FILE = path.join(app.getPath("userData"), "care-status.json");
-let careStatusWriting = false;
 
 ipcMain.on("care:status", async (_event, status) => {
-  if (careStatusWriting) return;
-  careStatusWriting = true;
-  failedUploadTimes = failedUploadTimes.filter((t) => t > Date.now() - 60_000);
-  const metrics = app.getAppMetrics();
-  // * percentCPUUsage is relative to one core and covers the time since the previous call
-  const cpuPct = metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) / os.cpus().length;
-  const snapshot = {
-    ...status,
-    ver: app.getVersion(),
-    up: Math.round(process.uptime()),
-    upFail: failedUploadTimes.length,
-    cpu: Math.round(cpuPct * 10) / 10,
-    memMB: Math.round(metrics.reduce((sum, m) => sum + m.memory.workingSetSize, 0) / 1024),
-  };
-  // * the rename replaces the file in one step, so the broadcaster never reads half of it
-  const tmp = `${CARE_STATUS_FILE}.tmp`;
+  if (!status || typeof status !== "object" || Array.isArray(status)) return;
   try {
+    failedUploadTimes = failedUploadTimes.filter((t) => t > Date.now() - 60_000);
+    const metrics = app.getAppMetrics();
+    // * percentCPUUsage is relative to one core and covers the time since the previous call
+    const cpuPct = metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) / os.cpus().length;
+    const snapshot = {
+      ...status,
+      ver: app.getVersion(),
+      up: Math.round(process.uptime()),
+      upFail: failedUploadTimes.length,
+      cpu: Math.round(cpuPct * 10) / 10,
+      memMB: Math.round(metrics.reduce((sum, m) => sum + m.memory.workingSetSize, 0) / 1024),
+    };
+    // * the rename replaces the file in one step, so the broadcaster never reads half of it
+    const tmp = `${CARE_STATUS_FILE}.tmp`;
     await fs.writeFile(tmp, JSON.stringify(snapshot));
     await fs.rename(tmp, CARE_STATUS_FILE);
   } catch (err) {
     console.warn("Cannot write the care status:", err.message);
-  } finally {
-    careStatusWriting = false;
   }
 });

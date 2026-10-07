@@ -61,7 +61,7 @@ function startCareStatus() {
       track.addEventListener("ended", () => camEvents++);
     }
 
-    if (!video.paused && lastTimestamp - currentTimestamp < LIVE_WINDOW_MS) {
+    if (!video.paused && currentTimestamp && lastTimestamp - currentTimestamp < LIVE_WINDOW_MS) {
       delays.push(Date.now() - getDisplayedTimestamp());
     }
 
@@ -81,10 +81,8 @@ function startCareStatus() {
     lastErrors = storeStats.errors;
 
     const quality = video.getVideoPlaybackQuality();
-    // * a new media source restarts the counters from zero
-    const restarted = quality.totalVideoFrames < lastQuality.totalVideoFrames;
-    const total = quality.totalVideoFrames - (restarted ? 0 : lastQuality.totalVideoFrames);
-    const dropped = quality.droppedVideoFrames - (restarted ? 0 : lastQuality.droppedVideoFrames);
+    const total = quality.totalVideoFrames - lastQuality.totalVideoFrames;
+    const dropped = quality.droppedVideoFrames - lastQuality.droppedVideoFrames;
     minute.drop = total > 0 ? round1((dropped / total) * 100) : null;
     lastQuality = quality;
 
