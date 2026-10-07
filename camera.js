@@ -162,6 +162,8 @@ let startTimestamp = 0;
 let lastTimestamp = 0;
 /** selected curring timestamp */
 let currentTimestamp = 0;
+/** chunks stored in this page session, read by care-status.js */
+const storeStats = { lastStoredAt: 0, bytes: 0, errors: 0 };
 
 // * https://stackoverflow.com/questions/50333767/html5-video-streaming-video-with-blob-urls/50354182
 
@@ -256,12 +258,15 @@ function storeBlob(blob, collectionName, cb) {
   const blobRecord = { blob, timestamp };
 
   const request = blobStore.add(blobRecord);
-  request.addEventListener("error", (e) =>
-    console.error("Error storing blob:", e.target.errorCode)
-  );
+  request.addEventListener("error", (e) => {
+    storeStats.errors++;
+    console.error("Error storing blob:", e.target.errorCode);
+  });
   request.addEventListener("success", (e) => {
     /** @type {number} */
     const id = e.target.result;
+    storeStats.lastStoredAt = timestamp;
+    storeStats.bytes += blob.size;
     if (logDatabaseOp) {
       console.info(`Blob stored in ${collectionName}:`, {
         id,

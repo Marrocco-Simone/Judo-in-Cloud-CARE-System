@@ -1,5 +1,7 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain } = require("electron");
+const fs = require("node:fs/promises");
+const os = require("node:os");
 const path = require("node:path");
 
 // https://www.electronforge.io/config/makers/squirrel.windows#handling-startup-events
@@ -49,6 +51,9 @@ const YOUTUBE_HLS_UPLOAD_URL = "https://a.upload.youtube.com/http_upload_hls";
 const YOUTUBE_UPLOAD_TIMEOUT_MS = 15_000;
 const YOUTUBE_UPLOAD_ATTEMPTS = 3;
 
+/** times of the failed upload attempts, for the care status */
+let failedUploadTimes = [];
+
 // * the renderer cannot upload to YouTube itself because of CORS
 ipcMain.handle("hls:upload", async (_event, streamKey, filename, arrayBuffer) => {
   const url = `${YOUTUBE_HLS_UPLOAD_URL}?cid=${encodeURIComponent(streamKey)}&copy=0&file=${encodeURIComponent(filename)}`;
@@ -58,6 +63,7 @@ ipcMain.handle("hls:upload", async (_event, streamKey, filename, arrayBuffer) =>
       await putHlsFile(url, body, filename);
       return;
     } catch (err) {
+      failedUploadTimes.push(Date.now());
       if (attempt === YOUTUBE_UPLOAD_ATTEMPTS) throw err;
       console.warn(`Retrying upload of ${filename} (attempt ${attempt} failed):`, err.message);
     }
@@ -82,3 +88,34 @@ async function putHlsFile(url, body, filename) {
     throw new Error(`YouTube upload of ${filename} failed (${response.status}): ${text}`);
   }
 }
+
+// * read by the PC Health Broadcaster on the same PC
+const CARE_STATUS_FILE = path.join(app.getPath("userData"), "care-status.json");
+let careStatusWriting = false;
+
+ipcMain.on("care:status", async (_event, status) => {
+  if (careStatusWriting) return;
+  careStatusWriting = true;
+  failedUploadTimes = failedUploadTimes.filter((t) => t > Date.now() - 60_000);
+  const metrics = app.getAppMetrics();
+  // * percentCPUUsage is relative to one core and covers the time since the previous call
+  const cpuPct = metrics.reduce((sum, m) => sum + m.cpu.percentCPUUsage, 0) / os.cpus().length;
+  const snapshot = {
+    ...status,
+    ver: app.getVersion(),
+    up: Math.round(process.uptime()),
+    upFail: failedUploadTimes.length,
+    cpu: Math.round(cpuPct * 10) / 10,
+    memMB: Math.round(metrics.reduce((sum, m) => sum + m.memory.workingSetSize, 0) / 1024),
+  };
+  // * the rename replaces the file in one step, so the broadcaster never reads half of it
+  const tmp = `${CARE_STATUS_FILE}.tmp`;
+  try {
+    await fs.writeFile(tmp, JSON.stringify(snapshot));
+    await fs.rename(tmp, CARE_STATUS_FILE);
+  } catch (err) {
+    console.warn("Cannot write the care status:", err.message);
+  } finally {
+    careStatusWriting = false;
+  }
+});

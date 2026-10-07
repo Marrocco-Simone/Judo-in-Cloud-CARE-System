@@ -9,4 +9,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   uploadHlsFile: (streamKey, filename, buffer) =>
     ipcRenderer.invoke("hls:upload", streamKey, filename, buffer),
+  /** @param {Record<string, unknown>} status */
+  reportCareStatus: (status) => ipcRenderer.send("care:status", status),
 });
