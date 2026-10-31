@@ -635,7 +635,8 @@ video.dragging {
 .stream-status.live {
   color: #ff5252;
 }
-.stream-status.error {
+.stream-status.error,
+.stream-status.reconnecting {
   color: #ffab91;
   font-weight: normal;
 }

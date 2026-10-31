@@ -7,6 +7,8 @@ const STREAM_AUDIO_BITRATE = 128_000;
 const STREAM_FRAME_RATE = 30;
 /** seconds. YouTube accepts 1 to 4 */
 const STREAM_SEGMENT_DURATION = 2;
+/** after a failed upload, the stream restarts by itself after this wait, until the user stops it */
+const STREAM_RECONNECT_DELAY_MS = 10_000;
 
 const streamingBar = document.querySelector(".streaming-bar");
 /** @type {HTMLInputElement} */
@@ -35,8 +37,9 @@ let consecutiveFrameErrors = 0;
 const MAX_CONSECUTIVE_FRAME_ERRORS = STREAM_FRAME_RATE * 2;
 /** @type {AudioContext | null} */
 let silentAudioContext = null;
-/** @type {"idle" | "connecting" | "live"} */
+/** @type {"idle" | "connecting" | "live" | "reconnecting"} */
 let streamState = "idle";
+let streamReconnectTimer = 0;
 /** incremented by every start and every release, so a stale start run can detect it */
 let streamGeneration = 0;
 
@@ -61,7 +64,7 @@ function setStreamToggleLabel(key) {
   streamToggleBtn.textContent = t(key);
 }
 
-/** @param {"connecting" | "live" | "stopped" | "error"} status */
+/** @param {"connecting" | "live" | "stopped" | "error" | "reconnecting"} status */
 function setStreamStatus(status, detail) {
   streamStatusElem.className = `stream-status ${status}`;
   streamStatusElem.textContent = detail
@@ -164,7 +167,10 @@ async function connectStream(streamKey, generation) {
     codec: "aac",
     bitrate: STREAM_AUDIO_BITRATE,
   });
-  audioSource.errorPromise.catch(failStreaming);
+  // * the audio track of a cancelled run must not stop a later run or a reconnection
+  audioSource.errorPromise.catch((err) => {
+    if (generation === streamGeneration) failStreaming(err);
+  });
   streamOutput.addAudioTrack(audioSource);
 
   await streamOutput.start();
@@ -197,7 +203,7 @@ async function uploadHlsFile(streamKey, filename, buffer, generation) {
     }
   } catch (err) {
     console.error(`Upload of ${filename} failed:`, err);
-    if (isCurrentRun && streamState !== "idle") failStreaming(err);
+    if (isCurrentRun && streamState !== "idle") reconnectStreaming(err);
   }
 }
 
@@ -266,8 +272,27 @@ async function failStreaming(err) {
   await output?.cancel().catch(() => {});
 }
 
+/**
+ * a failed upload stops only this run: a new run starts with the same key, as a manual restart does
+ * @param {unknown} err
+ */
+async function reconnectStreaming(err) {
+  const output = streamOutput;
+  releaseStreamResources();
+  streamState = "reconnecting";
+  streamKeyInput.disabled = true;
+  setStreamToggleLabel("stream.stop");
+  setStreamStatus("reconnecting", err instanceof Error ? err.message : String(err));
+  streamReconnectTimer = setTimeout(() => {
+    streamState = "idle";
+    startStreaming().catch(failStreaming);
+  }, STREAM_RECONNECT_DELAY_MS);
+  await output?.cancel().catch(() => {});
+}
+
 function releaseStreamResources() {
   streamState = "idle";
+  clearTimeout(streamReconnectTimer);
   streamGeneration++;
   streamOutput = null;
   streamCanvasSource = null;

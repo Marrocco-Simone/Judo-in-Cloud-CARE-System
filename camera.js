@@ -19,6 +19,8 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+/** camera height in pixels. 720 lowers the encoding load on slow PCs */
+const resolution = urlParams.get("resolution") === "720" ? 720 : 1080;
 console.log("params: ", {
   videoBitsPerSecond,
   REFRESHRATE,
@@ -26,6 +28,7 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  resolution,
   liveStateUrl,
 });
 
@@ -77,6 +80,10 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLSelectElement} */
+const resolutionInput = document.getElementById("resolutionInput");
+resolutionInput.value = String(resolution);
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -99,6 +106,8 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  newParams.set("resolution", resolutionInput.value);
 
   setLiveQueryParams(newParams);
 
@@ -614,8 +623,8 @@ function getWebcamStream() {
    * @type {MediaTrackConstraints}
    */
   const video = {
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
+    width: { ideal: (resolution * 16) / 9 },
+    height: { ideal: resolution },
     frameRate: { ideal: 30 },
   };
   if (deviceId) video.deviceId = deviceId;
@@ -627,6 +636,9 @@ function getWebcamStream() {
     .then((stream) => {
       // todo we can add multiple videotracks in the future
       const videoTrack = stream.getVideoTracks()[0];
+      videoTrack.addEventListener("ended", () =>
+        setWarning("camera", t("player.camera_ended"))
+      );
       videoTrackLabel = videoTrack.label;
       const settings = videoTrack.getSettings();
       console.log("video track settings:", settings);
@@ -1126,6 +1138,14 @@ setInterval(() => {
     recordingWindowStart = now;
     return;
   }
+  // * a muted or ended camera stores nothing: that is not a slow PC
+  const videoTrack = webcamStream?.getVideoTracks()[0];
+  if (!videoTrack || videoTrack.muted || videoTrack.readyState === "ended") {
+    setWarning("bitrate", null);
+    recordingWindowStart = now;
+    recordingWindowBytes = storeStats.bytes;
+    return;
+  }
   if (now - recordingWindowStart < RECORDING_WINDOW_MS) return;
   const kbps = Math.round(
     ((storeStats.bytes - recordingWindowBytes) * 8) / (now - recordingWindowStart)
@@ -1133,7 +1153,7 @@ setInterval(() => {
   setWarning(
     "bitrate",
     kbps < (videoBitsPerSecond / 1000) * LOW_BITRATE_RATIO
-      ? t("player.low_bitrate", { kbps })
+      ? t(videoTrack.getSettings().height > 720 ? "player.low_bitrate" : "player.low_bitrate_720", { kbps })
       : null
   );
   recordingWindowStart = now;

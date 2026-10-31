@@ -19,6 +19,8 @@ const logDatabaseOp = urlParams.get("logDatabaseOp") === "true" ? true : false;
 const showMoreVideoInfo =
   urlParams.get("showMoreVideoInfo") === "true" ? true : false;
 const deviceId = urlParams.get("deviceId");
+/** camera height in pixels. 720 lowers the encoding load on slow PCs */
+const resolution = urlParams.get("resolution") === "720" ? 720 : 1080;
 
 console.log("params: ", {
   videoBitsPerSecond,
@@ -27,6 +29,7 @@ console.log("params: ", {
   useAudio,
   logDatabaseOp,
   showMoreVideoInfo,
+  resolution,
   liveStateUrl,
 });
 
@@ -78,6 +81,10 @@ const showMoreVideoInfoInput = document.getElementById(
 );
 showMoreVideoInfoInput.checked = showMoreVideoInfo;
 
+/** @type {HTMLSelectElement} */
+const resolutionInput = document.getElementById("resolutionInput");
+resolutionInput.value = String(resolution);
+
 /** @param {SubmitEvent} e */
 function setNewQueryParams(e) {
   e.preventDefault();
@@ -100,6 +107,8 @@ function setNewQueryParams(e) {
 
   const showMoreVideoInfo = showMoreVideoInfoInput.checked;
   newParams.set("showMoreVideoInfo", showMoreVideoInfo);
+
+  newParams.set("resolution", resolutionInput.value);
 
   setLiveQueryParams(newParams);
 

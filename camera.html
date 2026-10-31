@@ -515,6 +515,13 @@
             <input id="useAudioInput" type="checkbox" />
           </label>
           <label>
+            <p data-i18n="settings.resolution">Qualità video</p>
+            <select id="resolutionInput" class="white-input">
+              <option value="1080">1080p</option>
+              <option value="720" data-i18n="settings.resolution_720">720p (PC lenti)</option>
+            </select>
+          </label>
+          <label>
             <p><span data-i18n="settings.frame_size">Frame size</span> [<span id="refreshRateInputValue"></span>]</p>
             <input
               id="refreshRateInput"
