@@ -1,6 +1,7 @@
 "use strict";
 
 // * Draws the Shiai second monitor on the stream canvas, mirroring shiai/frontend/components/pages/live-tatami.
+// * The match screen puts white on the left like the Shiai match timer, not inverted like the second monitor.
 // * Sizes follow the Shiai CSS: 1vh is 1% of the overlay height, 1rem is the root font size on a 1080p monitor.
 
 const OVERLAY_WIDTH_RATIO = 0.3;
@@ -478,7 +479,7 @@ function drawMatchScreen(ctx, box, state, timers, at) {
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = COLOR_PRIMARY_DARK;
-  ctx.fillRect(0, 0, w / 2, h);
+  ctx.fillRect(w / 2, 0, w / 2, h);
 
   // * top row: GS symbol, match timer, category name
   const topCenterY = (rowTops[0] + rowTops[1]) / 2;
@@ -522,14 +523,14 @@ function drawMatchScreen(ctx, box, state, timers, at) {
 function drawScoreRow(ctx, box, scores, top, height) {
   const { w, vh } = box;
   const cells = [
-    { value: scores.red_penalties, label: "Shido", cards: true },
-    { value: scores.red_ippon, label: "Ippon" },
-    { value: scores.red_wazaari, label: "Waza Ari" },
-    { value: scores.red_yuko, label: "Yuko" },
+    { value: scores.white_penalties, label: "Shido", cards: true },
     { value: scores.white_ippon, label: "Ippon" },
     { value: scores.white_wazaari, label: "Waza Ari" },
     { value: scores.white_yuko, label: "Yuko" },
-    { value: scores.white_penalties, label: "Shido", cards: true },
+    { value: scores.red_ippon, label: "Ippon" },
+    { value: scores.red_wazaari, label: "Waza Ari" },
+    { value: scores.red_yuko, label: "Yuko" },
+    { value: scores.red_penalties, label: "Shido", cards: true },
   ];
   const slotWidth = w / cells.length;
   const labelY = top + height - 2 * vh;
@@ -594,7 +595,8 @@ function drawShidoCards(ctx, box, count, centerX, top, height) {
 function drawOskRow(ctx, box, owner, maxTime, top, height, timers, at) {
   const { w, vh, rem } = box;
   const halfWidth = w / 2;
-  const halfX = owner === "RED" ? 0 : halfWidth;
+  const onLeft = owner === "WHITE";
+  const halfX = onLeft ? 0 : halfWidth;
   const centerY = top + height / 2;
   const timerSize = 12 * vh;
   const barHeight = timerSize * 1.15 * 0.96;
@@ -605,11 +607,11 @@ function drawOskRow(ctx, box, owner, maxTime, top, height, timers, at) {
   const radius = 2.5 * rem;
   const fillWidth = Math.min(oskTime / maxTime, 1) * barWidth;
 
-  const barX = owner === "RED" ? halfX + gap : halfX + gap * 3 + timerWidth;
-  const timerCenterX = owner === "RED" ? halfX + gap * 3 + barWidth + timerWidth / 2 : halfX + gap + timerWidth / 2;
+  const barX = onLeft ? halfX + gap : halfX + gap * 3 + timerWidth;
+  const timerCenterX = onLeft ? halfX + gap * 3 + barWidth + timerWidth / 2 : halfX + gap + timerWidth / 2;
   const barY = centerY - barHeight / 2;
   // * the bar is rounded on the side that faces the middle of the screen
-  const radii = owner === "RED" ? [0, radius, radius, 0] : [radius, 0, 0, radius];
+  const radii = onLeft ? [0, radius, radius, 0] : [radius, 0, 0, radius];
 
   ctx.beginPath();
   ctx.roundRect(barX, barY, barWidth, barHeight, radii);
@@ -620,7 +622,7 @@ function drawOskRow(ctx, box, owner, maxTime, top, height, timers, at) {
   ctx.stroke();
 
   if (fillWidth > 0) {
-    const fillX = owner === "RED" ? barX : barX + barWidth - fillWidth;
+    const fillX = onLeft ? barX : barX + barWidth - fillWidth;
     ctx.beginPath();
     ctx.roundRect(fillX, barY, fillWidth, barHeight, radii);
     ctx.fillStyle = COLOR_OSK_FILL;
@@ -663,8 +665,8 @@ function drawNamesRow(ctx, box, state, top, height) {
 
   ctx.font = overlayFont("bold", 6 * rem);
   ctx.textAlign = "center";
-  ctx.fillText(athleteShortName(state.red_athlete), w / 4, centerY, w / 2 - 2 * padding);
-  ctx.fillText(athleteShortName(state.white_athlete), (w * 3) / 4, centerY, w / 2 - 2 * padding);
+  ctx.fillText(athleteShortName(state.white_athlete), w / 4, centerY, w / 2 - 2 * padding);
+  ctx.fillText(athleteShortName(state.red_athlete), (w * 3) / 4, centerY, w / 2 - 2 * padding);
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
