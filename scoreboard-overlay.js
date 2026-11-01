@@ -1,7 +1,7 @@
 "use strict";
 
-// * Draws the Shiai second monitor on the stream canvas, mirroring shiai/frontend/components/pages/live-tatami.
-// * The match screen puts white on the left like the Shiai match timer, not inverted like the second monitor.
+// * Draws the Shiai scoreboard on the stream canvas, mirroring shiai/frontend/components/pages/live-tatami.
+// * The match screen puts white on the left like the Shiai match timer, not inverted like the Shiai second monitor.
 // * Sizes follow the Shiai CSS: 1vh is 1% of the overlay height, 1rem is the root font size on a 1080p monitor.
 
 const OVERLAY_WIDTH_RATIO = 0.3;
@@ -199,7 +199,7 @@ function overlayBox(x, y, w, h) {
 }
 
 /**
- * Draw the second monitor of now in the bottom right corner of the stream frame.
+ * Draw the scoreboard of now in the bottom right corner of the stream frame.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} frameWidth
  * @param {number} frameHeight
@@ -213,7 +213,7 @@ function drawScoreboardOverlay(ctx, frameWidth, frameHeight) {
 }
 
 /**
- * Draw the second monitor as it was at the given time.
+ * Draw the scoreboard as it was at the given time.
  * @param {CanvasRenderingContext2D} ctx
  * @param {OverlayBox} box
  * @param {number} at time in the clock of this PC
@@ -481,30 +481,30 @@ function drawMatchScreen(ctx, box, state, timers, at) {
   ctx.fillStyle = COLOR_PRIMARY_DARK;
   ctx.fillRect(w / 2, 0, w / 2, h);
 
-  // * top row: GS symbol, match timer, category name
+  // * top row: match timer, then the GS symbol in golden score or the category name
   const topCenterY = (rowTops[0] + rowTops[1]) / 2;
-  if (event.is_gs) {
-    ctx.font = overlayFont("bold", 15 * vh);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "black";
-    ctx.fillText("GS", columnWidth * 1.5 + 0.3 * vh, topCenterY + 0.6 * vh);
-    ctx.fillStyle = COLOR_TIMER_RUNNING;
-    ctx.fillText("GS", columnWidth * 1.5, topCenterY);
-  }
   const matchTime = currentMatchTime(timers, at);
   const clock = `${String(Math.floor(matchTime / 60)).padStart(2, "0")}:${String(matchTime % 60).padStart(2, "0")}`;
   drawTimerBox(ctx, box, clock, w / 2, topCenterY, 20 * vh, 1 * vh, timers.matchStart !== null);
 
-  ctx.fillStyle = "black";
-  ctx.font = overlayFont("bold", 5 * rem);
   ctx.textAlign = "center";
-  const nameWidth = 2 * columnWidth * 0.95;
-  const nameLines = wrapText(ctx, state.category_name, nameWidth, 2);
-  const lineHeight = 5 * rem;
-  nameLines.forEach((line, i) => {
-    const lineY = topCenterY + (i - (nameLines.length - 1) / 2) * lineHeight;
-    ctx.fillText(line, columnWidth * 5, lineY, nameWidth);
-  });
+  if (event.is_gs) {
+    ctx.font = overlayFont("bold", 15 * vh);
+    ctx.fillStyle = "black";
+    ctx.fillText("GS", columnWidth * 5 + 0.3 * vh, topCenterY + 0.6 * vh);
+    ctx.fillStyle = COLOR_TIMER_RUNNING;
+    ctx.fillText("GS", columnWidth * 5, topCenterY);
+  } else {
+    ctx.fillStyle = "black";
+    ctx.font = overlayFont("bold", 5 * rem);
+    const nameWidth = 2 * columnWidth * 0.95;
+    const nameLines = wrapText(ctx, state.category_name, nameWidth, 2);
+    const lineHeight = 5 * rem;
+    nameLines.forEach((line, i) => {
+      const lineY = topCenterY + (i - (nameLines.length - 1) / 2) * lineHeight;
+      ctx.fillText(line, columnWidth * 5, lineY, nameWidth);
+    });
+  }
 
   drawScoreRow(ctx, box, event.scores, rowTops[1], rowTops[2] - rowTops[1]);
   if (event.osk_owner) {
@@ -615,7 +615,7 @@ function drawOskRow(ctx, box, owner, maxTime, top, height, timers, at) {
 
   ctx.beginPath();
   ctx.roundRect(barX, barY, barWidth, barHeight, radii);
-  ctx.fillStyle = owner === "RED" ? "white" : COLOR_PRIMARY_DARK;
+  ctx.fillStyle = onLeft ? COLOR_PRIMARY_DARK : "white";
   ctx.fill();
   ctx.lineWidth = 0.5 * vh;
   ctx.strokeStyle = "black";
